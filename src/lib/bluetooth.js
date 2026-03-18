@@ -139,11 +139,10 @@ function buildPlainText(h) {
 
 export function printViaRawBT(h) {
   const lista = Array.isArray(h) ? h : [h]
-  // Cada cópia é disparada separadamente com 5s de intervalo
-  // sendRawBT usa <a> click para não mostrar diálogo do Chrome
-  lista.forEach((item, i) => {
-    setTimeout(() => sendRawBT(buildPlainText(item)), i * 5000)
-  })
+  // Todas as cópias em UM único rawbt: separadas por \f (form-feed = avança etiqueta)
+  // Evita múltiplas chamadas que o Chrome pode ignorar/bloquear
+  const texto = lista.map(item => buildPlainText(item)).join('\f')
+  sendRawBT(texto)
 }
 
 export function testViaRawBT() {

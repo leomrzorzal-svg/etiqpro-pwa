@@ -53,10 +53,10 @@ function fdtCpcl(s) {
   return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : s
 }
 
-function buildCpcl(h) {
-  // Job CPCL completo para UM label (RawBT com bytes inicial/terminal VAZIOS)
-  // ! offset-x offset-y height width qty
-  const lines = ['! 0 200 200 400 1']
+function buildCpcl(h, qty = 1) {
+  // Job CPCL: último campo do header = quantidade de cópias
+  // A impressora avança a etiqueta automaticamente entre cada cópia
+  const lines = [`! 0 200 200 400 ${qty}`]
   let y = 5
   lines.push('SETBOLD 1')
   lines.push(`TEXT 4 0 10 ${y} ${normCpcl(h.prod || h.produto || '')}`)
@@ -141,10 +141,9 @@ function buildPlainText(h) {
 
 export function printViaRawBT(h) {
   const lista = Array.isArray(h) ? h : [h]
-  // Cada etiqueta = job CPCL completo (! 0 200 200 400 1 ... FORM PRINT)
-  // Concatenados num único rawbt: — RawBT deve ter bytes inicial/terminal VAZIOS
-  const texto = lista.map(item => buildCpcl(item)).join('')
-  sendRawBT(texto)
+  // Um único job CPCL com qty=N no header → impressora avança etiqueta automaticamente
+  // Usa o primeiro item como conteúdo (todas as cópias são idênticas em conteúdo)
+  sendRawBT(buildCpcl(lista[0], lista.length))
 }
 
 export function testViaRawBT() {

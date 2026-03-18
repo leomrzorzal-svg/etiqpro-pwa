@@ -74,7 +74,14 @@ function buildCpcl(h) {
 }
 
 function sendRawBT(text) {
-  window.location.href = 'rawbt:' + encodeURIComponent(text)
+  // Usa <a> click para não navegar a página (window.location.href pode ser
+  // coalesced pelo Chrome e matar os timers de cópias subsequentes)
+  const a = document.createElement('a')
+  a.href = 'rawbt:' + encodeURIComponent(text)
+  a.style.display = 'none'
+  document.body.appendChild(a)
+  a.click()
+  setTimeout(() => { if (a.parentNode) a.parentNode.removeChild(a) }, 1000)
 }
 
 function center(str, w) {

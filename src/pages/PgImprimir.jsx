@@ -277,15 +277,12 @@ export default function PgImprimir() {
             <div className="modal-ft">
               <button className="btn btn-gy" onClick={() => setModal(false)}>Cancelar</button>
               {btStatus === 'connected' && (
-                <button onClick={handleImprimirBT} style={{padding:'13px 20px', background:'linear-gradient(135deg,#1565c0,#1976d2)', color:'#fff', border:'none', borderRadius:10, cursor:'pointer', fontSize:15, fontWeight:700, fontFamily:'inherit'}}>
-                  📡 Bluetooth
+                <button onClick={handleImprimirBT} style={{padding:'10px 16px', background:'#e3f2fd', color:'#1565c0', border:'2px solid #1565c0', borderRadius:10, cursor:'pointer', fontSize:13, fontWeight:700, fontFamily:'inherit'}}>
+                  📡 BLE
                 </button>
               )}
-              <button onClick={handleImprimirRawBT} style={{padding:'13px 20px', background:'linear-gradient(135deg,#2e7d32,#388e3c)', color:'#fff', border:'none', borderRadius:10, cursor:'pointer', fontSize:15, fontWeight:700, fontFamily:'inherit'}}>
-                📱 RawBT
-              </button>
-              <button onClick={handleImprimir} style={{padding:'13px 28px', background:'linear-gradient(135deg,#f4a11d,#e67e00)', color:'#fff', border:'none', borderRadius:10, cursor:'pointer', fontSize:15, fontWeight:700, fontFamily:'inherit'}}>
-                🖨️ Imprimir Agora
+              <button onClick={handleImprimirRawBT} style={{padding:'15px 32px', background:'linear-gradient(135deg,#2e7d32,#388e3c)', color:'#fff', border:'none', borderRadius:12, cursor:'pointer', fontSize:17, fontWeight:800, fontFamily:'inherit', flex:1, minWidth:180}}>
+                📱 IMPRIMIR via RawBT {qty > 1 ? `(${qty}×)` : ''}
               </button>
             </div>
           </div>

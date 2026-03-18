@@ -1,0 +1,440 @@
+// Mini MES - La Miguelita Salgados
+// PostgreSQL Schema via Prisma ORM
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================
+// ENUMS
+// =============================================
+
+enum TipoProducao {
+  ASSADO
+  FRITO
+  MANUAL
+}
+
+enum TipoMaquina {
+  USIFOOD_1
+  USIFOOD_2
+  MCI
+  MESA_1
+  MESA_2
+  MESA_3
+}
+
+enum StatusOP {
+  PLANEJADA
+  LIBERADA
+  EM_ANDAMENTO
+  CONCLUIDA
+  CANCELADA
+  PAUSADA
+}
+
+enum StatusBatida {
+  PENDENTE
+  INICIADA
+  PAUSADA
+  FECHADA
+  CONFIRMADA
+}
+
+enum UnidadeMedida {
+  KG
+  GRAMAS
+  LITROS
+  ML
+  UNIDADE
+  CAIXA
+}
+
+enum TurnoProducao {
+  MANHA
+  TARDE
+  NOITE
+}
+
+enum PrioridadePedido {
+  BAIXA
+  MEDIA
+  ALTA
+  URGENTE
+}
+
+// =============================================
+// PRODUTOS
+// =============================================
+
+model Produto {
+  id                    String        @id @default(uuid())
+  nome                  String
+  categoria             String
+  tipo_producao         TipoProducao
+  maquina_permitida     TipoMaquina[]
+  peso_unitario_g       Float         // em gramas
+  unidades_por_caixa    Int
+  peso_caixa_padrao_kg  Float
+  tolerancia_peso_pct   Float         @default(3.0) // % de tolerância
+  lote_ideal            Int           // unidades por lote ideal
+  lote_maximo_batida    Int
+  tempo_medio_min       Float         // minutos por batida
+  foto_url              String?
+  ativo                 Boolean       @default(true)
+  codigo_erp            String?       @unique
+  created_at            DateTime      @default(now())
+  updated_at            DateTime      @updatedAt
+
+  receita               Receita?
+  instrucoes            InstrucaoOperacional[]
+  ordens                OrdemProducao[]
+  planejamentos         PlanoProducaoProduto[]
+
+  @@map("produtos")
+}
+
+model Receita {
+  id          String            @id @default(uuid())
+  produto_id  String            @unique
+  versao      Int               @default(1)
+  descricao   String?
+  rendimento  Float             // kg de produto final
+  created_at  DateTime          @default(now())
+  updated_at  DateTime          @updatedAt
+
+  produto     Produto           @relation(fields: [produto_id], references: [id])
+  ingredientes ReceitaIngrediente[]
+
+  @@map("receitas")
+}
+
+model ReceitaIngrediente {
+  id              String        @id @default(uuid())
+  receita_id      String
+  ingrediente_id  String
+  quantidade      Float         // por lote ideal
+  unidade         UnidadeMedida
+  opcional        Boolean       @default(false)
+  observacao      String?
+
+  receita         Receita       @relation(fields: [receita_id], references: [id])
+  ingrediente     Ingrediente   @relation(fields: [ingrediente_id], references: [id])
+
+  @@map("receita_ingredientes")
+}
+
+model InstrucaoOperacional {
+  id          String   @id @default(uuid())
+  produto_id  String
+  ordem       Int
+  titulo      String
+  descricao   String
+  foto_url    String?
+  video_url   String?
+
+  produto     Produto  @relation(fields: [produto_id], references: [id])
+
+  @@map("instrucoes_operacionais")
+}
+
+// =============================================
+// INGREDIENTES / INSUMOS
+// =============================================
+
+model Ingrediente {
+  id                String        @id @default(uuid())
+  nome              String
+  unidade_medida    UnidadeMedida
+  custo_unitario    Float         // custo por unidade
+  fornecedor        String?
+  codigo_erp        String?       @unique
+  estoque_atual     Float         @default(0)
+  estoque_minimo    Float         @default(0)
+  ativo             Boolean       @default(true)
+  created_at        DateTime      @default(now())
+  updated_at        DateTime      @updatedAt
+
+  receitas          ReceitaIngrediente[]
+  consumos_batida   ConsumoBatida[]
+
+  @@map("ingredientes")
+}
+
+// =============================================
+// PLANEJAMENTO DE PRODUÇÃO
+// =============================================
+
+model PlanoSemanal {
+  id            String               @id @default(uuid())
+  semana_inicio DateTime             @db.Date
+  semana_fim    DateTime             @db.Date
+  status        String               @default("RASCUNHO") // RASCUNHO | APROVADO | EM_EXECUCAO | CONCLUIDO
+  gerado_por_ia Boolean              @default(false)
+  aprovado_por  String?
+  aprovado_em   DateTime?
+  observacoes   String?
+  created_at    DateTime             @default(now())
+  updated_at    DateTime             @updatedAt
+
+  dias          PlanoDia[]
+  ordens        OrdemProducao[]
+
+  @@map("planos_semanais")
+}
+
+model PlanoDia {
+  id              String               @id @default(uuid())
+  plano_id        String
+  data            DateTime             @db.Date
+  turno           TurnoProducao
+  capacidade_pct  Float                @default(100)
+  observacoes     String?
+
+  plano           PlanoSemanal         @relation(fields: [plano_id], references: [id])
+  produtos        PlanoProducaoProduto[]
+
+  @@map("plano_dias")
+}
+
+model PlanoProducaoProduto {
+  id              String      @id @default(uuid())
+  plano_dia_id    String
+  produto_id      String
+  maquina         TipoMaquina
+  quantidade      Int
+  prioridade      Int         @default(1)
+  horario_inicio  DateTime?
+  horario_fim     DateTime?
+
+  plano_dia       PlanoDia    @relation(fields: [plano_dia_id], references: [id])
+  produto         Produto     @relation(fields: [produto_id], references: [id])
+
+  @@map("plano_producao_produtos")
+}
+
+// =============================================
+// ORDENS DE PRODUÇÃO
+// =============================================
+
+model OrdemProducao {
+  id                  String      @id @default(uuid())
+  codigo              String      @unique // OP-2024-0001
+  produto_id          String
+  plano_id            String?
+  quantidade_planejada Int
+  quantidade_realizada Int        @default(0)
+  maquina             TipoMaquina
+  data_planejada      DateTime    @db.Date
+  turno               TurnoProducao
+  prioridade          PrioridadePedido @default(MEDIA)
+  status              StatusOP    @default(PLANEJADA)
+  lote_maximo_batida  Int
+  observacoes         String?
+  pedido_ref          String?     // referência no ERP
+  created_at          DateTime    @default(now())
+  updated_at          DateTime    @updatedAt
+
+  produto             Produto     @relation(fields: [produto_id], references: [id])
+  plano               PlanoSemanal? @relation(fields: [plano_id], references: [id])
+  batidas             Batida[]
+
+  @@map("ordens_producao")
+}
+
+// =============================================
+// BATIDAS
+// =============================================
+
+model Batida {
+  id                  String        @id @default(uuid())
+  ordem_id            String
+  numero_batida       Int           // 1, 2, 3, 4...
+  total_batidas       Int           // total de batidas da OP
+  quantidade_meta     Int
+  quantidade_produzida Int          @default(0)
+  status              StatusBatida  @default(PENDENTE)
+  iniciada_em         DateTime?
+  fechada_em          DateTime?
+  confirmada_em       DateTime?
+  confirmada_por      String?
+  operador_id         String?
+  peso_total_kg       Float?        // peso medido na balança
+  peso_unitario_g     Float?        // peso calculado por unidade
+  observacoes         String?
+  created_at          DateTime      @default(now())
+  updated_at          DateTime      @updatedAt
+
+  ordem               OrdemProducao  @relation(fields: [ordem_id], references: [id])
+  consumos            ConsumoBatida[]
+  sobras              SobraBatida[]
+  perdas              PerdaBatida[]
+  pesagens            PesagemBalanca[]
+  custo               CustoBatida?
+
+  @@map("batidas")
+}
+
+model ConsumoBatida {
+  id              String        @id @default(uuid())
+  batida_id       String
+  ingrediente_id  String
+  quantidade_prev Float
+  quantidade_real Float         @default(0)
+  unidade         UnidadeMedida
+  diferenca       Float         @default(0) // real - previsto
+  created_at      DateTime      @default(now())
+
+  batida          Batida        @relation(fields: [batida_id], references: [id])
+  ingrediente     Ingrediente   @relation(fields: [ingrediente_id], references: [id])
+
+  @@map("consumos_batida")
+}
+
+model SobraBatida {
+  id          String        @id @default(uuid())
+  batida_id   String
+  tipo        String        // massa | recheio | outro
+  quantidade  Float
+  unidade     UnidadeMedida
+  destino     String?       // reaproveitada | descartada | estoque
+
+  batida      Batida        @relation(fields: [batida_id], references: [id])
+
+  @@map("sobras_batida")
+}
+
+model PerdaBatida {
+  id          String        @id @default(uuid())
+  batida_id   String
+  tipo        String        // massa | recheio | processo | qualidade
+  quantidade  Float
+  unidade     UnidadeMedida
+  motivo      String?
+
+  batida      Batida        @relation(fields: [batida_id], references: [id])
+
+  @@map("perdas_batida")
+}
+
+// =============================================
+// INTEGRAÇÃO COM BALANÇA
+// =============================================
+
+model PesagemBalanca {
+  id              String   @id @default(uuid())
+  batida_id       String
+  modo            String   // POR_CAIXA | ACUMULADO
+  peso_kg         Float
+  num_caixas      Int?     // para modo POR_CAIXA
+  unidades_calc   Int      // calculado pelo sistema
+  timestamp       DateTime @default(now())
+  dispositivo_id  String?
+
+  batida          Batida   @relation(fields: [batida_id], references: [id])
+
+  @@map("pesagens_balanca")
+}
+
+// =============================================
+// CUSTO REAL
+// =============================================
+
+model CustoBatida {
+  id                  String    @id @default(uuid())
+  batida_id           String    @unique
+  custo_total         Float
+  custo_unitario      Float
+  custo_perdas        Float
+  custo_ingredientes  Float
+  custo_mao_obra      Float     @default(0)
+  custo_energia       Float     @default(0)
+  calculado_em        DateTime  @default(now())
+  fonte_precos        String    @default("SISTEMA") // SISTEMA | ERP
+
+  batida              Batida    @relation(fields: [batida_id], references: [id])
+  detalhes            CustoIngredienteBatida[]
+
+  @@map("custos_batida")
+}
+
+model CustoIngredienteBatida {
+  id              String   @id @default(uuid())
+  custo_batida_id String
+  ingrediente_id  String
+  ingrediente_nome String
+  quantidade      Float
+  preco_unitario  Float
+  custo_total     Float
+
+  custo_batida    CustoBatida @relation(fields: [custo_batida_id], references: [id])
+
+  @@map("custos_ingredientes_batida")
+}
+
+// =============================================
+// USUÁRIOS / OPERADORES
+// =============================================
+
+model Usuario {
+  id          String   @id @default(uuid())
+  nome        String
+  login       String   @unique
+  senha_hash  String
+  perfil      String   // OPERADOR | SUPERVISORA | GERENTE | ADMIN
+  ativo       Boolean  @default(true)
+  created_at  DateTime @default(now())
+
+  @@map("usuarios")
+}
+
+// =============================================
+// LOG DE EVENTOS / AUDITORIA
+// =============================================
+
+model LogEvento {
+  id          String   @id @default(uuid())
+  usuario_id  String?
+  modulo      String
+  acao        String
+  entidade    String?
+  entidade_id String?
+  dados       Json?
+  ip          String?
+  timestamp   DateTime @default(now())
+
+  @@map("log_eventos")
+}
+
+// =============================================
+// BASE DE CONHECIMENTO DA IA
+// =============================================
+
+model ConhecimentoIA {
+  id          String   @id @default(uuid())
+  categoria   String   // RECEITA | PROCEDIMENTO | HIGIENE | EQUIPAMENTO | BOAS_PRATICAS
+  titulo      String
+  conteudo    String   @db.Text
+  tags        String[]
+  ativo       Boolean  @default(true)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  @@map("conhecimento_ia")
+}
+
+model ConversaIA {
+  id          String   @id @default(uuid())
+  usuario_id  String?
+  pergunta    String   @db.Text
+  resposta    String   @db.Text
+  contexto    Json?    // batida_id, produto_id, etc.
+  timestamp   DateTime @default(now())
+
+  @@map("conversas_ia")
+}

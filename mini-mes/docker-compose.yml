@@ -1,0 +1,70 @@
+version: '3.9'
+
+services:
+  # =============================================
+  # Banco de Dados PostgreSQL
+  # =============================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: mini-mes-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mini_mes
+      POSTGRES_USER: mes_user
+      POSTGRES_PASSWORD: mes_senha_segura_2024
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/migrations:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mes_user -d mini_mes"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # =============================================
+  # Backend API (Node.js + Express)
+  # =============================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mini-mes-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgresql://mes_user:mes_senha_segura_2024@postgres:5432/mini_mes
+      JWT_SECRET: ${JWT_SECRET:-mude_este_secret_em_producao}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      BALANCA_PORTA: ${BALANCA_PORTA:-/dev/ttyUSB0}
+      BALANCA_BAUD: ${BALANCA_BAUD:-9600}
+    ports:
+      - "3001:3001"
+    volumes:
+      - backend_uploads:/app/uploads
+
+  # =============================================
+  # Frontend (Next.js)
+  # =============================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: mini-mes-web
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/api}
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:
+  backend_uploads:

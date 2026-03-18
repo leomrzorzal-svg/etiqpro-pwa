@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p etiqpro-zip-extract)",
+      "Bash(unzip -o \"/c/Users/Leonardo PC Trabalho/Downloads/etiqpro-pwa.zip\" -d etiqpro-zip-extract)",
+      "Bash(rm -rf /tmp/etiqpro-pwa-clone/src)",
+      "Bash(cp -r /tmp/etiqpro-zip-extract/etiqpro-pwa/src /tmp/etiqpro-pwa-clone/src)",
+      "Bash(cp -r \"/tmp/check-etiqpro-pwa \\(3\\)/etiqpro-pwa/src\" /tmp/etiqpro-pwa-clone/src)",
+      "Bash(wc -l /tmp/etiqpro-pwa-clone/src/pages/Pg*.jsx)",
+      "Bash(wc -l /tmp/etiqpro-pwa-clone/src/App.jsx /tmp/etiqpro-pwa-clone/src/lib/*.js)",
+      "Bash(for f:*)",
+      "Bash(do echo:*)",
+      "Read(//c/etiqpro-pwa_novo/**)",
+      "Bash(done)",
+      "Bash(/c/etiqpro-pwa_novo/src/pages/PgImprimir.jsx:*)",
+      "Bash(npm install:*)",
+      "Bash(node -e \"require\\(''''@supabase/supabase-js''''\\)\")",
+      "Bash(ipconfig)",
+      "Bash(npm run:*)",
+      "Bash(netsh advfirewall:*)",
+      "Bash(vercel --yes --prod)",
+      "Bash(vercel login:*)",
+      "Bash(npx vercel:*)",
+      "Read(//c/Users/Leonardo PC Trabalho/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/8af3202c-efea-421a-92ee-8d0968b12eb0/9e6687a1-08ec-43aa-9c12-2e4112197ce6/skills/docx/**)",
+      "Bash(pandoc --track-changes=all \"C:\\\\Users\\\\Leonardo PC Trabalho\\\\Downloads\\\\prompt_mini_mes_la_miguelita \\(1\\).docx\" -o output.md)",
+      "Bash(pip install:*)",
+      "Bash(python scripts/office/unpack.py \"C:\\\\Users\\\\Leonardo PC Trabalho\\\\Downloads\\\\prompt_mini_mes_la_miguelita \\(1\\).docx\" unpacked/)",
+      "Bash(find /c/etiqpro-pwa_novo -maxdepth 3 -name *.md)",
+      "Bash(find /c/etiqpro-pwa_novo -maxdepth 2 -not -path */node_modules/* -type f)",
+      "Bash(find C:etiqpro-pwa_novo -maxdepth 2 -not -path */node_modules* -type d)",
+      "Bash(grep -E '\\\\.jsx?$')",
+      "Bash(vercel --version)",
+      "Bash(npx netlify-cli:*)"
+    ]
+  }
+}

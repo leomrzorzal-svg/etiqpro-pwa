@@ -74,13 +74,7 @@ function buildCpcl(h) {
 }
 
 function sendRawBT(text) {
-  // Usa <a> click para evitar o diálogo "sair do site" do Chrome
-  const a = document.createElement('a')
-  a.href = 'rawbt:' + encodeURIComponent(text)
-  a.style.display = 'none'
-  document.body.appendChild(a)
-  a.click()
-  setTimeout(() => { try { document.body.removeChild(a) } catch {} }, 500)
+  window.location.href = 'rawbt:' + encodeURIComponent(text)
 }
 
 function center(str, w) {

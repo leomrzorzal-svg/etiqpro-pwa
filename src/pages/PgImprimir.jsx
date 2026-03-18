@@ -191,99 +191,100 @@ export default function PgImprimir() {
               <button className="modal-cl" onClick={() => setModal(false)}>×</button>
             </div>
             <div className="modal-bd">
-              {/* Preview */}
-              <div style={{border:'3px solid #e67e00', borderRadius:12, padding:14, background:'#f9fffe', marginBottom:20, fontFamily:'Arial,sans-serif'}}>
-                <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6}}>
-                  <span style={{fontWeight:900, fontSize:12, color:'#e67e00'}}>etiqPRO</span>
-                  <span style={{fontSize:10, color:'#aaa'}}>{new Date().toLocaleDateString('pt-BR')}</span>
-                </div>
-                <div style={{fontSize:20, fontWeight:900, color:'#111', lineHeight:1.1, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', margin:'4px 0 2px'}}>{prod.nome}</div>
-                <div style={{fontSize:11, fontWeight:700, color:g.cor, marginBottom:8}}>{g.nome}</div>
-                <div style={{display:'grid', gridTemplateColumns:`1fr 1fr${pesoFmt?' 1fr':''}`, gap:8, background:'#fff', borderRadius:8, padding:10, marginBottom:8, border:'1px solid #e0e3ea'}}>
-                  <div>
-                    <div style={{fontSize:8, fontWeight:800, color:'#888', textTransform:'uppercase', display:'block', marginBottom:2}}>Abertura</div>
-                    <div style={{fontSize:16, fontWeight:900}}>{fd(hoje)}</div>
-                  </div>
-                  <div>
-                    <div style={{fontSize:8, fontWeight:800, color:'#888', textTransform:'uppercase', display:'block', marginBottom:2}}>Validade</div>
-                    <div style={{fontSize:16, fontWeight:900, color:'#e53935'}}>{valDate ? fd(valDate) : 'Não definida'}</div>
-                  </div>
-                  {pesoFmt && <div>
-                    <div style={{fontSize:8, fontWeight:800, color:'#888', textTransform:'uppercase', display:'block', marginBottom:2}}>Peso</div>
-                    <div style={{fontSize:16, fontWeight:900}}>{pesoFmt}</div>
-                  </div>}
-                </div>
-                {prod.ingr && <div style={{fontSize:10, color:'#444', marginBottom:6, padding:'6px 8px', background:'#fff8f0', borderRadius:5, borderLeft:'2px solid #e67e00'}}>
-                  <strong style={{fontSize:9, color:'#e67e00', textTransform:'uppercase', display:'block', marginBottom:2}}>Ingredientes</strong>{prod.ingr}
-                </div>}
-                {prod.conserv && <div style={{fontSize:10, fontWeight:700, color:'#1565c0', background:'#e3f2fd', borderRadius:6, padding:'4px 8px', marginBottom:5, display:'inline-block'}}>{prod.conserv}</div>}
-                {prod.obs && <div style={{fontSize:10, color:'#6b7280', fontStyle:'italic', marginBottom:4, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{prod.obs}</div>}
-                <div style={{display:'flex', justifyContent:'space-between', fontSize:10, color:'#6b7280', borderTop:'1px solid #e0e3ea', paddingTop:8}}>
-                  <span>Operador: <b>{opNome || '-'}</b></span>
-                  <span>{qty} etiqueta{qty > 1 ? 's' : ''}</span>
-                </div>
-              </div>
 
-              {/* Nome do operador */}
-              <div style={{marginBottom:14}}>
-                <label style={{display:'block', fontSize:15, fontWeight:800, color:'#1a1a2e', marginBottom:8}}>
+              {/* 1. Nome do operador */}
+              <div style={{marginBottom:12}}>
+                <label style={{display:'block', fontSize:13, fontWeight:800, color:'#6b7280', textTransform:'uppercase', letterSpacing:.5, marginBottom:6}}>
                   Seu nome <span style={{color:'#e53935'}}>*</span>
                 </label>
                 <input
                   type="text"
                   value={opNome}
                   onChange={e => { setOpNome(e.target.value); setOpErr(false) }}
-                  placeholder="Digite seu nome aqui..."
+                  placeholder="Digite seu nome..."
                   autoFocus
                   style={{
-                    width:'100%', padding:15, border:`3px solid ${opErr ? '#e53935' : '#e0e3ea'}`, borderRadius:12,
-                    fontSize:18, fontWeight:700, outline:'none', fontFamily:'inherit', textAlign:'center',
+                    width:'100%', padding:'12px 16px', border:`3px solid ${opErr ? '#e53935' : '#e0e3ea'}`, borderRadius:12,
+                    fontSize:17, fontWeight:700, outline:'none', fontFamily:'inherit', textAlign:'center',
                     background:'#fafafa', boxSizing:'border-box'
                   }}
                 />
                 {opErr && <div style={{color:'#e53935', fontSize:12, marginTop:5, fontWeight:700}}>⚠️ Nome obrigatório para imprimir</div>}
               </div>
 
-              {/* Peso */}
-              <div style={{marginBottom:14}}>
-                <label style={{display:'block', fontSize:15, fontWeight:800, color:'#1a1a2e', marginBottom:8}}>
-                  Peso em KG <span style={{color:'#6b7280', fontWeight:500, fontSize:13}}>(opcional)</span>
-                </label>
-                <div style={{position:'relative'}}>
-                  <input
-                    type="number" step="0.001" min="0"
-                    value={peso} onChange={e => setPeso(e.target.value)}
-                    placeholder="Ex: 0.500"
-                    style={{
-                      width:'100%', padding:'13px 50px 13px 13px', border:'2px solid #e0e3ea', borderRadius:12,
-                      fontSize:16, fontWeight:600, outline:'none', fontFamily:'inherit', background:'#fafafa',
-                      boxSizing:'border-box', textAlign:'center'
-                    }}
-                  />
-                  <span style={{position:'absolute', right:14, top:'50%', transform:'translateY(-50%)', fontWeight:800, color:'#6b7280', fontSize:14, pointerEvents:'none'}}>KG</span>
+              {/* 2. Quantidade + Peso em linha */}
+              <div style={{display:'flex', gap:12, alignItems:'center', marginBottom:16}}>
+                <div style={{flex:1}}>
+                  <label style={{display:'block', fontSize:11, fontWeight:700, color:'#6b7280', textTransform:'uppercase', marginBottom:4}}>Qtd</label>
+                  <div style={{display:'flex', alignItems:'center', gap:8, justifyContent:'center', background:'#f5f6fa', borderRadius:10, padding:'8px 0'}}>
+                    <button onClick={() => changeQty(-1)} style={{width:36, height:36, borderRadius:8, border:'2px solid #e0e3ea', background:'#fff', fontSize:20, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'inherit'}}>−</button>
+                    <span style={{fontSize:24, fontWeight:900, minWidth:36, textAlign:'center'}}>{qty}</span>
+                    <button onClick={() => changeQty(1)} style={{width:36, height:36, borderRadius:8, border:'2px solid #e0e3ea', background:'#fff', fontSize:20, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'inherit'}}>+</button>
+                  </div>
+                </div>
+                <div style={{flex:1}}>
+                  <label style={{display:'block', fontSize:11, fontWeight:700, color:'#6b7280', textTransform:'uppercase', marginBottom:4}}>Peso KG <span style={{fontWeight:400}}>(opc.)</span></label>
+                  <div style={{position:'relative'}}>
+                    <input
+                      type="number" step="0.001" min="0"
+                      value={peso} onChange={e => setPeso(e.target.value)}
+                      placeholder="0.000"
+                      style={{
+                        width:'100%', padding:'10px 38px 10px 10px', border:'2px solid #e0e3ea', borderRadius:10,
+                        fontSize:15, fontWeight:600, outline:'none', fontFamily:'inherit', background:'#fafafa',
+                        boxSizing:'border-box', textAlign:'center'
+                      }}
+                    />
+                    <span style={{position:'absolute', right:10, top:'50%', transform:'translateY(-50%)', fontWeight:800, color:'#6b7280', fontSize:12, pointerEvents:'none'}}>KG</span>
+                  </div>
                 </div>
               </div>
 
-              {/* Quantidade */}
-              <div>
-                <label style={{display:'block', fontSize:13, fontWeight:700, color:'#6b7280', textAlign:'center', marginBottom:4}}>Quantidade</label>
-                <div style={{display:'flex', alignItems:'center', gap:14, justifyContent:'center', margin:'10px 0'}}>
-                  <button onClick={() => changeQty(-1)} style={{width:44, height:44, borderRadius:10, border:'2px solid #e0e3ea', background:'#fff', fontSize:22, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'inherit'}}>−</button>
-                  <span style={{fontSize:26, fontWeight:900, minWidth:50, textAlign:'center'}}>{qty}</span>
-                  <button onClick={() => changeQty(1)} style={{width:44, height:44, borderRadius:10, border:'2px solid #e0e3ea', background:'#fff', fontSize:22, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'inherit'}}>+</button>
+              {/* 3. BOTÃO IMPRIMIR — sempre visível */}
+              <button
+                onClick={handleImprimirRawBT}
+                style={{
+                  display:'block', width:'100%', padding:'18px 0',
+                  background:'linear-gradient(135deg,#2e7d32,#43a047)',
+                  color:'#fff', border:'none', borderRadius:14,
+                  cursor:'pointer', fontSize:20, fontWeight:900,
+                  fontFamily:'inherit', letterSpacing:.3,
+                  boxShadow:'0 4px 20px rgba(46,125,50,.4)',
+                  marginBottom:16
+                }}
+              >
+                📱 IMPRIMIR {qty > 1 ? `${qty} CÓPIAS` : 'ETIQUETA'}
+              </button>
+
+              {/* 4. Preview compacto (abaixo do botão, scroll se necessário) */}
+              <div style={{border:'2px solid #e0e3ea', borderRadius:10, padding:12, background:'#fafafa', fontFamily:'Arial,sans-serif', fontSize:11}}>
+                <div style={{display:'flex', justifyContent:'space-between', marginBottom:4}}>
+                  <span style={{fontWeight:900, color:'#e67e00'}}>etiqPRO</span>
+                  <span style={{color:'#aaa'}}>{new Date().toLocaleDateString('pt-BR')}</span>
+                </div>
+                <div style={{fontSize:15, fontWeight:900, color:'#111', marginBottom:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{prod.nome}</div>
+                <div style={{fontWeight:700, color:g.cor, marginBottom:6}}>{g.nome}</div>
+                <div style={{display:'flex', gap:16, background:'#fff', borderRadius:6, padding:'6px 10px', marginBottom:6, border:'1px solid #e0e3ea'}}>
+                  <div><div style={{fontSize:8, color:'#888', textTransform:'uppercase'}}>Abertura</div><div style={{fontSize:14, fontWeight:900}}>{fd(hoje)}</div></div>
+                  <div><div style={{fontSize:8, color:'#888', textTransform:'uppercase'}}>Validade</div><div style={{fontSize:14, fontWeight:900, color:'#e53935'}}>{valDate ? fd(valDate) : '—'}</div></div>
+                  {pesoFmt && <div><div style={{fontSize:8, color:'#888', textTransform:'uppercase'}}>Peso</div><div style={{fontSize:14, fontWeight:900}}>{pesoFmt}</div></div>}
+                </div>
+                {prod.conserv && <div style={{fontWeight:700, color:'#1565c0', background:'#e3f2fd', borderRadius:4, padding:'2px 8px', display:'inline-block', marginBottom:4}}>{prod.conserv}</div>}
+                <div style={{color:'#6b7280', borderTop:'1px solid #e0e3ea', paddingTop:6, marginTop:4, display:'flex', justifyContent:'space-between'}}>
+                  <span>Operador: <b>{opNome || '—'}</b></span>
+                  <span>{qty} etiq.</span>
                 </div>
               </div>
-            </div>
-            <div className="modal-ft">
-              <button className="btn btn-gy" onClick={() => setModal(false)}>Cancelar</button>
-              {btStatus === 'connected' && (
-                <button onClick={handleImprimirBT} style={{padding:'10px 16px', background:'#e3f2fd', color:'#1565c0', border:'2px solid #1565c0', borderRadius:10, cursor:'pointer', fontSize:13, fontWeight:700, fontFamily:'inherit'}}>
-                  📡 BLE
-                </button>
-              )}
-              <button onClick={handleImprimirRawBT} style={{padding:'15px 32px', background:'linear-gradient(135deg,#2e7d32,#388e3c)', color:'#fff', border:'none', borderRadius:12, cursor:'pointer', fontSize:17, fontWeight:800, fontFamily:'inherit', flex:1, minWidth:180}}>
-                📱 IMPRIMIR via RawBT {qty > 1 ? `(${qty}×)` : ''}
-              </button>
+
+              {/* Cancelar + BLE (secundários) */}
+              <div style={{display:'flex', gap:8, marginTop:12, justifyContent:'space-between'}}>
+                <button className="btn btn-gy" onClick={() => setModal(false)}>✕ Cancelar</button>
+                {btStatus === 'connected' && (
+                  <button onClick={handleImprimirBT} style={{padding:'8px 16px', background:'#e3f2fd', color:'#1565c0', border:'2px solid #1565c0', borderRadius:10, cursor:'pointer', fontSize:12, fontWeight:700, fontFamily:'inherit'}}>
+                    📡 BLE direto
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>

@@ -138,37 +138,20 @@ export default function PgConfig() {
         </div>
       </div>
 
-      {/* Impressora Bluetooth direto (avançado) */}
-      <div className="panel" style={{marginBottom:20}}>
-        <div className="panel-hd"><h3>📡 Bluetooth Direto (avançado)</h3></div>
-        <div className="panel-bd">
-          <div style={{display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
-            <div style={{display:'flex',alignItems:'center',gap:10,padding:'12px 20px',borderRadius:12,background:bt.bg,border:`1px solid ${bt.color}33`,flex:1,minWidth:220}}>
-              <span style={{fontSize:24}}>{bt.icon}</span>
-              <div>
-                <div style={{fontWeight:800,fontSize:15,color:bt.color}}>{bt.label}</div>
-                <div style={{fontSize:12,color:'#6b7280',marginTop:2}}>
-                  {btStatus==='connected' ? `Dispositivo: ${btDeviceRef.current?.name || 'Impressora'}` : 'Nenhuma impressora conectada'}
-                </div>
+      {/* Aviso: NÃO precisa conectar para RawBT */}
+      <div className="panel" style={{marginBottom:20,border:'2px solid #e67e00'}}>
+        <div className="panel-bd" style={{padding:16}}>
+          <div style={{display:'flex',gap:12,alignItems:'flex-start'}}>
+            <span style={{fontSize:28}}>ℹ️</span>
+            <div>
+              <div style={{fontWeight:800,fontSize:15,color:'#e67e00',marginBottom:4}}>Não precisa conectar a impressora!</div>
+              <div style={{fontSize:13,color:'#555',lineHeight:1.5}}>
+                Para imprimir via <b>RawBT</b>, <b>não é necessário conectar nada aqui</b>.<br/>
+                Basta abrir o produto em <b>Imprimir Etiqueta</b> e tocar no botão <b style={{color:'#2e7d32'}}>📱 IMPRIMIR via RawBT</b>.<br/>
+                O Android abre o RawBT automaticamente.
               </div>
             </div>
-            <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
-              {btStatus !== 'connected' ? (
-                <button className="btn btn-p" onClick={connectBT} disabled={btStatus==='connecting'} style={{opacity:btStatus==='connecting'?0.6:1}}>
-                  📡 {btStatus==='connecting' ? 'Conectando...' : 'Conectar'}
-                </button>
-              ) : (
-                <>
-                  <button className="btn btn-gy" onClick={disconnectBT}>✕ Desconectar</button>
-                  <button className="btn" style={{background:'#1565c0',color:'#fff'}} onClick={testPrintBT}>🖨️ Testar ESC/POS</button>
-                  <button className="btn" style={{background:'#6a1b9a',color:'#fff'}} onClick={simpleTestPrintBT}>📄 Teste Simples</button>
-                </>
-              )}
-            </div>
           </div>
-          <p style={{fontSize:12,color:'var(--t2)',marginTop:12}}>
-            ⚠️ <b>Requer Chrome ou Edge.</b> Use somente se não estiver usando o RawBT.
-          </p>
         </div>
       </div>
 

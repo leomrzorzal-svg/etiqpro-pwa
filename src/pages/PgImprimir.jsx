@@ -253,7 +253,7 @@ export default function PgImprimir() {
                   marginBottom:16
                 }}
               >
-                📱 IMPRIMIR {qty > 1 ? `${qty} CÓPIAS` : 'ETIQUETA'}
+                📱 IMPRIMIR via RawBT {qty > 1 ? `· ${qty} cópias` : ''}
               </button>
 
               {/* 4. Preview compacto (abaixo do botão, scroll se necessário) */}

@@ -453,7 +453,7 @@ export default function App() {
                 etiq<span style={{color:'#e67e00'}}>PRO</span>
                 <span style={{display:'inline-block', width:3, height:3, background:'#e67e00', borderRadius:'50%', marginLeft:1, marginBottom:2}}></span>
               </div>
-              <div style={{fontSize:9, opacity:.45, marginTop:1}}>Cozinha</div>
+              <div style={{fontSize:9, opacity:.45, marginTop:1}}>v2.2 · Cozinha</div>
             </div>
           </div>
           {/* Usuário */}

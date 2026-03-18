@@ -1,6 +1,6 @@
 import React, { useState, createContext, useContext, useEffect, useRef } from 'react'
 import { supabase } from './lib/supabase'
-import { btSupported, connectPrinter, printLabel, testPrint, simplePrintTest, printViaRawBT, testViaRawBT } from './lib/bluetooth'
+import { btSupported, connectPrinter, printLabel, testPrint, simplePrintTest, printViaRawBT, testViaRawBT, calibratePrint } from './lib/bluetooth'
 
 export const AppCtx = createContext({})
 export const useApp = () => useContext(AppCtx)
@@ -259,6 +259,15 @@ export default function App() {
     }
   }
 
+  function doCalibratePrint() {
+    try {
+      calibratePrint()
+      showToast('✓ Calibração enviada — veja qual número inicia na 2ª etiqueta', 'ok', 6000)
+    } catch (e) {
+      showToast('Erro RawBT: ' + e.message, 'erro')
+    }
+  }
+
   // ── Initial load from Supabase ─────────────────────────────────────────────
   useEffect(() => {
     async function init() {
@@ -404,7 +413,7 @@ export default function App() {
   const nav = user.role === 'admin' ? NAV_ADMIN : NAV_OP
   const pageInfo = nav.find(n => n.id === page) || nav[0]
 
-  const ctx = { user, data, updateData, showToast, setPage: navigate, btStatus, connectBT, disconnectBT, printBT, testPrintBT, simpleTestPrintBT, doPrintRawBT, doTestRawBT, btDeviceRef }
+  const ctx = { user, data, updateData, showToast, setPage: navigate, btStatus, connectBT, disconnectBT, printBT, testPrintBT, simpleTestPrintBT, doPrintRawBT, doTestRawBT, doCalibratePrint, btDeviceRef }
 
   const pageMap = {
     imprimir:   <PgImprimir />,

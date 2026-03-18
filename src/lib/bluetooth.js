@@ -74,8 +74,13 @@ function buildCpcl(h) {
 }
 
 function sendRawBT(text) {
-  // Impressora neste canal só aceita texto puro — sem comandos ESC/POS ou CPCL
-  window.location.href = 'rawbt:' + encodeURIComponent(text)
+  // Usa <a> click para evitar o diálogo "sair do site" do Chrome
+  const a = document.createElement('a')
+  a.href = 'rawbt:' + encodeURIComponent(text)
+  a.style.display = 'none'
+  document.body.appendChild(a)
+  a.click()
+  setTimeout(() => { try { document.body.removeChild(a) } catch {} }, 500)
 }
 
 function center(str, w) {
@@ -105,7 +110,7 @@ function buildPlainText(h) {
 
   const L = []
 
-  // ── Nome do produto (1 linha separadora para economizar espaço) ──
+  // ── Nome do produto ──
   L.push(SEP)
   for (let i = 0; i < prod.length; i += W) {
     L.push(center(prod.slice(i, i + W), W))
@@ -127,18 +132,16 @@ function buildPlainText(h) {
   L.push(center(`${op}  ${num}`, W))
   L.push(center(`${hoje} ${hora}`, W))
   L.push(SEP)
-  L.push('')
+
   return L.join('\r\n') + '\r\n'
 }
 
 export function printViaRawBT(h) {
   const lista = Array.isArray(h) ? h : [h]
-  // Cada cópia é um job separado, disparado com 4s de intervalo
-  // Assim a impressora termina a etiqueta anterior antes de receber a próxima
+  // Cada cópia é disparada separadamente com 5s de intervalo
+  // sendRawBT usa <a> click para não mostrar diálogo do Chrome
   lista.forEach((item, i) => {
-    setTimeout(() => {
-      window.location.href = 'rawbt:' + encodeURIComponent(buildPlainText(item))
-    }, i * 4000)
+    setTimeout(() => sendRawBT(buildPlainText(item)), i * 5000)
   })
 }
 
@@ -153,6 +156,16 @@ export function testViaRawBT() {
     ''
   ].join('\r\n')
   sendRawBT(texto)
+}
+
+// Imprime linhas numeradas para calibrar altura da etiqueta.
+// O usuário olha qual número aparece NO TOPO da 2ª etiqueta — esse é o LABEL_HEIGHT correto.
+export function calibratePrint() {
+  const lines = []
+  for (let i = 1; i <= 80; i++) {
+    lines.push('Linha ' + String(i).padStart(2, '0') + ' ---------------')
+  }
+  sendRawBT(lines.join('\r\n') + '\r\n')
 }
 
 export async function connectPrinter() {

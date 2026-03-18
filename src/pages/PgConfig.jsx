@@ -14,7 +14,7 @@ const ROLE_DESC = {
 }
 
 export default function PgConfig() {
-  const { data, updateData, showToast, user, btStatus, connectBT, disconnectBT, testPrintBT, simpleTestPrintBT, doTestRawBT, btDeviceRef } = useApp()
+  const { data, updateData, showToast, user, btStatus, connectBT, disconnectBT, testPrintBT, simpleTestPrintBT, doTestRawBT, doCalibratePrint, btDeviceRef } = useApp()
   const [modal, setModal] = useState(false)
   const [form, setForm] = useState({ id: null, nome: '', user: '', senha: '', role: 'operador' })
   const [senhaAtual, setSenhaAtual] = useState('')
@@ -125,9 +125,15 @@ export default function PgConfig() {
             <button className="btn" style={{background:'#1565c0',color:'#fff'}} onClick={doTestRawBT}>
               🖨️ Imprimir Teste
             </button>
+            <button className="btn" style={{background:'#6a1b9a',color:'#fff'}} onClick={doCalibratePrint}>
+              📏 Calibrar Etiqueta
+            </button>
           </div>
           <p style={{fontSize:12,color:'var(--t2)',marginTop:12}}>
             ℹ️ O app <b>RawBT</b> deve estar instalado e com a impressora configurada no tablet. Ao imprimir, o Android abrirá o RawBT automaticamente.
+          </p>
+          <p style={{fontSize:12,color:'#6a1b9a',marginTop:6}}>
+            📏 <b>Calibrar Etiqueta:</b> imprime linhas numeradas de 01 a 80. Veja qual número aparece no <b>início da 2ª etiqueta</b> e informe esse número para ajustar as cópias múltiplas.
           </p>
         </div>
       </div>

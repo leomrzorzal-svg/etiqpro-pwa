@@ -54,7 +54,8 @@ function fdtCpcl(s) {
 }
 
 function buildCpcl(h) {
-  // Etiqueta: 100mm largura (800 dots) x 50mm altura (400 dots) a 203dpi
+  // Job CPCL completo para UM label (RawBT com bytes inicial/terminal VAZIOS)
+  // ! offset-x offset-y height width qty
   const lines = ['! 0 200 200 400 1']
   let y = 5
   lines.push('SETBOLD 1')
@@ -65,9 +66,10 @@ function buildCpcl(h) {
   lines.push(`TEXT 4 0 10 ${y} ----------------------------------------`); y += 28
   lines.push(`TEXT 4 0 10 ${y} Abertura : ${fdtCpcl(h.manip || h.fabricacao)}`); y += 28
   lines.push(`TEXT 4 0 10 ${y} Validade : ${fdtCpcl(h.val || h.validade)}`); y += 28
-  if (h.peso) { lines.push(`TEXT 4 0 10 ${y} Peso     : ${normCpcl(h.peso)}`); y += 28 }
-  if (y < 370) { lines.push(`TEXT 4 0 10 ${y} Operador : ${normCpcl(h.op || h.operador || '')}`); y += 28 }
-  if (h.obs && y < 370) { lines.push(`TEXT 4 0 10 ${y} ${normCpcl(h.obs)}`); y += 28 }
+  if (h.peso)   { lines.push(`TEXT 4 0 10 ${y} Peso     : ${normCpcl(h.peso)}`); y += 28 }
+  if (h.conserv && y < 365) { lines.push(`TEXT 4 0 10 ${y} ${normCpcl(h.conserv)}`); y += 28 }
+  if (h.op && y < 365)  { lines.push(`TEXT 4 0 10 ${y} Operador : ${normCpcl(h.op || h.operador || '')}`); y += 28 }
+  if (h.obs && y < 365) { lines.push(`TEXT 4 0 10 ${y} ${normCpcl(h.obs)}`); y += 28 }
   lines.push('FORM')
   lines.push('PRINT')
   return lines.join('\r\n') + '\r\n'
@@ -139,9 +141,9 @@ function buildPlainText(h) {
 
 export function printViaRawBT(h) {
   const lista = Array.isArray(h) ? h : [h]
-  // Todas as cópias em UM único rawbt: separadas por \f (form-feed = avança etiqueta)
-  // Evita múltiplas chamadas que o Chrome pode ignorar/bloquear
-  const texto = lista.map(item => buildPlainText(item)).join('\f')
+  // Cada etiqueta = job CPCL completo (! 0 200 200 400 1 ... FORM PRINT)
+  // Concatenados num único rawbt: — RawBT deve ter bytes inicial/terminal VAZIOS
+  const texto = lista.map(item => buildCpcl(item)).join('')
   sendRawBT(texto)
 }
 

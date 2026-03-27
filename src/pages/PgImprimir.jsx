@@ -2,8 +2,9 @@ import React, { useState } from 'react'
 import { useApp, fd, td, calcVal, nextNum, formatPesoKg } from '../App'
 
 export default function PgImprimir() {
-  const { data, updateData, showToast, btStatus, printBT, doPrintRawBT } = useApp()
+  const { data, updateData, showToast, btStatus, connectBT, disconnectBT, printBT, doPrintRawBT, btDeviceRef } = useApp()
   const [busca, setBusca] = useState('')
+  const [grupoFiltro, setGrupoFiltro] = useState(null)
   const [modal, setModal] = useState(false)
   const [prodSel, setProdSel] = useState(null)
   const [opNome, setOpNome] = useState('')
@@ -14,8 +15,12 @@ export default function PgImprimir() {
   const hoje = td()
 
   const prods = data.prods.filter(p =>
-    p.ativo && (!busca || p.nome.toLowerCase().includes(busca.toLowerCase()))
+    p.ativo &&
+    (!busca || p.nome.toLowerCase().includes(busca.toLowerCase())) &&
+    (!grupoFiltro || p.grp == grupoFiltro)
   )
+
+  const gruposComProd = data.grps.filter(g => data.prods.some(p => p.ativo && p.grp == g.id))
 
   function abrirModal(p) {
     setProdSel(p)
@@ -82,21 +87,21 @@ export default function PgImprimir() {
     const g = data.grps.find(x => x.id == p.grp) || { nome: 'Sem grupo', cor: '#999' }
     const valDate = p.vDias ? calcVal(p.vDias) : ''
     const pesoFmt = peso ? formatPesoKg(peso) : ''
-    const novas = []
-    for (let i = 0; i < qty; i++) {
-      const counter = (data.counter || 0) + 1 + i
-      const num = nextNum(counter)
-      novas.push({
-        id: Date.now() + i, num,
-        prod: p.nome, grp: g.nome, grpCor: g.cor,
-        ingr: p.ingr||'', obs: p.obs||'', conserv: p.conserv||'',
-        manip: hoje, val: valDate, op: opNome, peso: pesoFmt,
-        at: new Date().toISOString(),
-        baixada: false, baixadaEm: null, baixadaPor: null, tipoBaixa: null, descMotivo: null, descPeso: null,
-      })
+    const counter = (data.counter || 0) + 1
+    const num = nextNum(counter)
+    const h = {
+      id: Date.now(), num,
+      prod: p.nome, grp: g.nome, grpCor: g.cor,
+      ingr: p.ingr||'', obs: p.obs||'', conserv: p.conserv||'',
+      manip: hoje, val: valDate, op: opNome, peso: pesoFmt,
+      at: new Date().toISOString(),
+      baixada: false, baixadaEm: null, baixadaPor: null, tipoBaixa: null, descMotivo: null, descPeso: null,
     }
+    // Registra todas as cópias no histórico
+    const novas = Array.from({ length: qty }, (_, i) => ({ ...h, id: Date.now() + i, num: nextNum(counter + i) }))
     updateData(d => ({ ...d, counter: (d.counter || 0) + qty, hist: [...novas, ...d.hist] }))
-    for (const h of novas) await printBT(h)
+    // Envia um único job CPCL com qty=N — a impressora imprime N etiquetas separadas
+    await printBT(h, qty)
     setModal(false)
   }
 
@@ -151,6 +156,40 @@ export default function PgImprimir() {
         )}
       </div>
 
+      {/* Botões de grupo */}
+      {gruposComProd.length > 1 && (
+        <div style={{display:'flex', gap:8, flexWrap:'wrap', marginBottom:20}}>
+          <button
+            onClick={() => setGrupoFiltro(null)}
+            style={{
+              padding:'8px 18px', borderRadius:20, border:'2px solid',
+              borderColor: grupoFiltro === null ? '#e67e00' : '#e0e3ea',
+              background: grupoFiltro === null ? '#e67e00' : '#fff',
+              color: grupoFiltro === null ? '#fff' : '#6b7280',
+              fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
+              transition:'all .15s'
+            }}
+          >Todos</button>
+          {gruposComProd.map(g => (
+            <button key={g.id}
+              onClick={() => setGrupoFiltro(grupoFiltro === g.id ? null : g.id)}
+              style={{
+                padding:'8px 18px', borderRadius:20, border:'2px solid',
+                borderColor: grupoFiltro === g.id ? g.cor : '#e0e3ea',
+                background: grupoFiltro === g.id ? g.cor : '#fff',
+                color: grupoFiltro === g.id ? '#fff' : '#1a1a2e',
+                fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
+                display:'flex', alignItems:'center', gap:7,
+                transition:'all .15s'
+              }}
+            >
+              <span style={{width:8, height:8, borderRadius:'50%', background: grupoFiltro === g.id ? '#fff' : g.cor, flexShrink:0}} />
+              {g.nome}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Grid de produtos */}
       {prods.length === 0 ? (
         <div style={{textAlign:'center', padding:'48px 20px', color:'#6b7280'}}>
@@ -170,10 +209,12 @@ export default function PgImprimir() {
           if (!lista.length) return null
           return (
             <div key={grp.id} style={{marginBottom:28}}>
-              <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:12}}>
-                <div style={{width:10, height:10, borderRadius:'50%', background:grp.cor}} />
-                <span style={{fontSize:13, fontWeight:800, color:'#6b7280', textTransform:'uppercase', letterSpacing:.8}}>{grp.nome}</span>
-              </div>
+              {!grupoFiltro && (
+                <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:12}}>
+                  <div style={{width:10, height:10, borderRadius:'50%', background:grp.cor}} />
+                  <span style={{fontSize:13, fontWeight:800, color:'#6b7280', textTransform:'uppercase', letterSpacing:.8}}>{grp.nome}</span>
+                </div>
+              )}
               <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(155px,1fr))', gap:16}}>
                 {lista.map(p => <ProdCard key={p.id} p={p} g={grp} onClick={() => abrirModal(p)} />)}
               </div>
@@ -240,21 +281,59 @@ export default function PgImprimir() {
                 </div>
               </div>
 
-              {/* 3. BOTÃO IMPRIMIR — sempre visível */}
-              <button
-                onClick={handleImprimirRawBT}
-                style={{
-                  display:'block', width:'100%', padding:'18px 0',
-                  background:'linear-gradient(135deg,#2e7d32,#43a047)',
-                  color:'#fff', border:'none', borderRadius:14,
-                  cursor:'pointer', fontSize:20, fontWeight:900,
-                  fontFamily:'inherit', letterSpacing:.3,
-                  boxShadow:'0 4px 20px rgba(46,125,50,.4)',
-                  marginBottom:16
-                }}
-              >
-                📱 IMPRIMIR via RawBT {qty > 1 ? `· ${qty} cópias` : ''}
-              </button>
+              {/* 3. BOTÃO IMPRIMIR — BLE principal */}
+              {btStatus === 'connected' ? (
+                <div style={{marginBottom:8}}>
+                  <button
+                    onClick={handleImprimirBT}
+                    style={{
+                      display:'block', width:'100%', padding:'18px 0',
+                      background:'linear-gradient(135deg,#1565c0,#1976d2)',
+                      color:'#fff', border:'none', borderRadius:14,
+                      cursor:'pointer', fontSize:20, fontWeight:900,
+                      fontFamily:'inherit', letterSpacing:.3,
+                      boxShadow:'0 4px 20px rgba(21,101,192,.4)',
+                      marginBottom:6
+                    }}
+                  >
+                    🖨️ IMPRIMIR {qty > 1 ? `· ${qty} cópias` : '· 1 cópia'}
+                  </button>
+                  <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', background:'#e8f5e9', borderRadius:8, padding:'6px 12px'}}>
+                    <span style={{fontSize:11, color:'#2e7d32', fontWeight:600}}>
+                      🟢 {btDeviceRef.current?.name || 'Impressora'}
+                    </span>
+                    <button
+                      onClick={async () => { disconnectBT(); setTimeout(() => connectBT(), 300) }}
+                      style={{
+                        padding:'4px 12px', background:'#fff', color:'#1565c0', border:'1px solid #1565c0',
+                        borderRadius:6, cursor:'pointer', fontSize:11, fontWeight:700, fontFamily:'inherit'
+                      }}
+                    >
+                      🔄 Trocar Impressora
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{marginBottom:8}}>
+                  <button
+                    onClick={connectBT}
+                    style={{
+                      display:'block', width:'100%', padding:'18px 0',
+                      background:'linear-gradient(135deg,#1565c0,#1976d2)',
+                      color:'#fff', border:'none', borderRadius:14,
+                      cursor:'pointer', fontSize:18, fontWeight:900,
+                      fontFamily:'inherit',
+                      boxShadow:'0 4px 20px rgba(21,101,192,.4)',
+                      marginBottom:6
+                    }}
+                  >
+                    📡 Conectar Impressora Bluetooth
+                  </button>
+                  <div style={{fontSize:12, color:'#6b7280', textAlign:'center'}}>
+                    Conecte a impressora uma vez por sessão
+                  </div>
+                </div>
+              )}
 
               {/* 4. Preview compacto (abaixo do botão, scroll se necessário) */}
               <div style={{border:'2px solid #e0e3ea', borderRadius:10, padding:12, background:'#fafafa', fontFamily:'Arial,sans-serif', fontSize:11}}>
@@ -276,14 +355,12 @@ export default function PgImprimir() {
                 </div>
               </div>
 
-              {/* Cancelar + BLE (secundários) */}
-              <div style={{display:'flex', gap:8, marginTop:12, justifyContent:'space-between'}}>
+              {/* Rodapé */}
+              <div style={{display:'flex', gap:8, marginTop:8, justifyContent:'space-between', alignItems:'center'}}>
                 <button className="btn btn-gy" onClick={() => setModal(false)}>✕ Cancelar</button>
-                {btStatus === 'connected' && (
-                  <button onClick={handleImprimirBT} style={{padding:'8px 16px', background:'#e3f2fd', color:'#1565c0', border:'2px solid #1565c0', borderRadius:10, cursor:'pointer', fontSize:12, fontWeight:700, fontFamily:'inherit'}}>
-                    📡 BLE direto
-                  </button>
-                )}
+                <button onClick={handleImprimirRawBT} style={{padding:'8px 14px', background:'#f5f6fa', color:'#6b7280', border:'1px solid #e0e3ea', borderRadius:10, cursor:'pointer', fontSize:11, fontWeight:600, fontFamily:'inherit'}}>
+                  📱 RawBT
+                </button>
               </div>
             </div>
           </div>

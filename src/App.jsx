@@ -1,6 +1,6 @@
 import React, { useState, createContext, useContext, useEffect, useRef } from 'react'
 import { supabase } from './lib/supabase'
-import { btSupported, connectPrinter, printLabel, testPrint, simplePrintTest, printViaRawBT, testViaRawBT, calibratePrint } from './lib/bluetooth'
+import { btSupported, connectPrinter, printLabel, printLabelsCpcl, testPrint, simplePrintTest, printViaRawBT, testViaRawBT, calibratePrint } from './lib/bluetooth'
 
 export const AppCtx = createContext({})
 export const useApp = () => useContext(AppCtx)
@@ -203,11 +203,11 @@ export default function App() {
     showToast('Impressora desconectada', '')
   }
 
-  async function printBT(h) {
+  async function printBT(h, qty = 1) {
     if (!btCharRef.current) return showToast('Impressora não conectada', 'erro')
     try {
-      await printLabel(btCharRef.current, h)
-      showToast('✓ Impresso via Bluetooth!', 'ok')
+      await printLabelsCpcl(btCharRef.current, h, qty)
+      showToast(`✓ ${qty > 1 ? qty + ' cópias impressas' : 'Impresso'} via Bluetooth!`, 'ok')
     } catch (e) {
       setBtStatus('error')
       showToast('Erro ao imprimir: ' + e.message, 'erro')
@@ -508,14 +508,43 @@ export default function App() {
               <div style={{fontWeight:800, fontSize:21}}>{pageInfo.label}</div>
               <div style={{fontSize:13, color:'#6b7280', marginTop:2}}>{pageInfo.sub}</div>
             </div>
-            {/* Sync badge */}
-            <div style={{
-              display:'flex', alignItems:'center', gap:6, padding:'6px 14px',
-              borderRadius:20, background:'#f5f6fa', border:'1px solid #e0e3ea',
-              fontSize:12, fontWeight:600, color: si.color
-            }}>
-              <span>{si.icon}</span>
-              <span>{si.label}</span>
+            <div style={{display:'flex', alignItems:'center', gap:10}}>
+              {/* Impressora BT */}
+              {btStatus === 'connected' ? (
+                <button
+                  onClick={() => { disconnectBT(); setTimeout(() => connectBT(), 300) }}
+                  style={{
+                    display:'flex', alignItems:'center', gap:6, padding:'6px 14px',
+                    borderRadius:20, background:'#e8f5e9', border:'1px solid #a5d6a7',
+                    fontSize:12, fontWeight:700, color:'#2e7d32', cursor:'pointer', fontFamily:'inherit'
+                  }}
+                >
+                  <span>🖨️</span>
+                  <span>{btDeviceRef.current?.name || 'Impressora'}</span>
+                  <span style={{color:'#1565c0', marginLeft:4}}>🔄 Trocar</span>
+                </button>
+              ) : (
+                <button
+                  onClick={connectBT}
+                  style={{
+                    display:'flex', alignItems:'center', gap:6, padding:'6px 14px',
+                    borderRadius:20, background:'#e3f2fd', border:'1px solid #90caf9',
+                    fontSize:12, fontWeight:700, color:'#1565c0', cursor:'pointer', fontFamily:'inherit'
+                  }}
+                >
+                  <span>🖨️</span>
+                  <span>Conectar Impressora</span>
+                </button>
+              )}
+              {/* Sync badge */}
+              <div style={{
+                display:'flex', alignItems:'center', gap:6, padding:'6px 14px',
+                borderRadius:20, background:'#f5f6fa', border:'1px solid #e0e3ea',
+                fontSize:12, fontWeight:600, color: si.color
+              }}>
+                <span>{si.icon}</span>
+                <span>{si.label}</span>
+              </div>
             </div>
           </div>
 

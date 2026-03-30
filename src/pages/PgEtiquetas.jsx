@@ -10,12 +10,14 @@ const TABS = [
   ['descartadas', 'Descartadas'],
 ]
 
+const SENHA_EXCLUIR = '2536'
+
 export default function PgEtiquetas() {
-  const { data, updateData, showToast } = useApp()
+  const { user, data, updateData, showToast } = useApp()
   const [tab, setTab] = useState('todas')
   const [busca, setBusca] = useState('')
 
-  // Modal baixa
+  // Modal baixa individual
   const [modalBaixa, setModalBaixa] = useState(null)
   const [tipoSel, setTipoSel] = useState(null)
   const [baixaOp, setBaixaOp] = useState('')
@@ -30,36 +32,55 @@ export default function PgEtiquetas() {
   const [editDescPeso, setEditDescPeso] = useState('')
   const [editDescMotivo, setEditDescMotivo] = useState('')
 
-  const role = data.usuario?.role || 'operador'
+  // Seleção em lote
+  const [selecionadas, setSelecionadas] = useState(new Set())
 
-  // Build filtered list
+  // Modal senha (excluir)
+  const [modalSenha, setModalSenha] = useState(null) // null | 'excluir-um' | 'excluir-lote'
+  const [senhaAlvo, setSenhaAlvo] = useState(null)
+  const [senhaInput, setSenhaInput] = useState('')
+  const [senhaErr, setSenhaErr] = useState(false)
+
+  // Modal baixa em lote
+  const [modalBaixaLote, setModalBaixaLote] = useState(false)
+  const [loteOp, setLoteOp] = useState('')
+  const [loteTipo, setLoteTipo] = useState('uso')
+  const [loteMotivo, setLoteMotivo] = useState('')
+  const [loteErros, setLoteErros] = useState({})
+
+  const role = user?.role || 'operador'
+  const isAdmin = role === 'admin'
+
+  // Lista filtrada
   let lista = [...data.hist].sort((a, b) => new Date(b.at) - new Date(a.at))
   if (tab === 'ativas')        lista = lista.filter(h => !h.baixada && (!h.val || du(h.val) >= 0))
   else if (tab === 'vencendo') lista = lista.filter(h => !h.baixada && h.val && du(h.val) >= 0 && du(h.val) <= 2)
   else if (tab === 'vencidas') lista = lista.filter(h => !h.baixada && h.val && du(h.val) < 0)
   else if (tab === 'baixadas') lista = lista.filter(h => h.baixada)
   else if (tab === 'descartadas') lista = lista.filter(h => h.tipoBaixa === 'descarte')
-
   if (busca) {
     const q = busca.toLowerCase()
     lista = lista.filter(h =>
       (h.num && h.num.toLowerCase().includes(q)) ||
       (h.prod && h.prod.toLowerCase().includes(q)) ||
       (h.op && h.op.toLowerCase().includes(q)) ||
-      (h.grp && h.grp.toLowerCase().includes(q)) ||
-      (h.peso && h.peso.toLowerCase().includes(q))
+      (h.grp && h.grp.toLowerCase().includes(q))
     )
   }
 
   const countVencendo = data.hist.filter(h => !h.baixada && h.val && du(h.val) >= 0 && du(h.val) <= 2).length
+  const numSel = selecionadas.size
 
+  // ── Seleção ──────────────────────────────────────────────────────────────
+  function toggleSel(id) {
+    setSelecionadas(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
+  }
+  function selAll()   { setSelecionadas(new Set(lista.map(h => h.id))) }
+  function deselAll() { setSelecionadas(new Set()) }
+
+  // ── Baixa individual ─────────────────────────────────────────────────────
   function abrirBaixa(h) {
-    setModalBaixa(h)
-    setTipoSel(null)
-    setBaixaOp('')
-    setDescMotivo('')
-    setDescPeso('')
-    setErros({})
+    setModalBaixa(h); setTipoSel(null); setBaixaOp(''); setDescMotivo(''); setDescPeso(''); setErros({})
   }
 
   function confirmarBaixa() {
@@ -68,39 +89,78 @@ export default function PgEtiquetas() {
     if (!baixaOp.trim()) errs.op = true
     if (tipoSel === 'descarte') {
       if (!descMotivo.trim()) errs.motivo = true
-      if (!descPeso.trim()) errs.peso = true
+      if (!descPeso.trim())   errs.peso   = true
     }
     if (Object.keys(errs).length) { setErros(errs); return }
-
     const now = new Date().toISOString()
     updateData(d => ({
       ...d,
       hist: d.hist.map(h => h.id === modalBaixa.id ? {
-        ...h,
-        baixada: true,
-        baixadaEm: now,
-        baixadaPor: baixaOp.trim(),
-        tipoBaixa: tipoSel,
+        ...h, baixada: true, baixadaEm: now, baixadaPor: baixaOp.trim(), tipoBaixa: tipoSel,
         descMotivo: tipoSel === 'descarte' ? descMotivo.trim() : null,
-        descPeso: tipoSel === 'descarte' ? formatPesoKg(descPeso) : null,
+        descPeso:   tipoSel === 'descarte' ? formatPesoKg(descPeso) : null,
       } : h)
     }))
     showToast(`✓ Etiqueta ${modalBaixa.num} baixada!`, 'ok')
     setModalBaixa(null)
   }
 
+  // ── Baixa em lote ────────────────────────────────────────────────────────
+  function abrirBaixaLote() {
+    setLoteOp(''); setLoteTipo('uso'); setLoteMotivo(''); setLoteErros({})
+    setModalBaixaLote(true)
+  }
+
+  function confirmarBaixaLote() {
+    const errs = {}
+    if (!loteOp.trim()) errs.op = true
+    if (loteTipo === 'descarte' && !loteMotivo.trim()) errs.motivo = true
+    if (Object.keys(errs).length) { setLoteErros(errs); return }
+    const now = new Date().toISOString()
+    const ids = selecionadas
+    updateData(d => ({
+      ...d,
+      hist: d.hist.map(h => ids.has(h.id) && !h.baixada ? {
+        ...h, baixada: true, baixadaEm: now, baixadaPor: loteOp.trim(), tipoBaixa: loteTipo,
+        descMotivo: loteTipo === 'descarte' ? loteMotivo.trim() : null, descPeso: null,
+      } : h)
+    }))
+    showToast(`✅ ${ids.size} etiqueta${ids.size > 1 ? 's' : ''} baixada${ids.size > 1 ? 's' : ''} em lote!`, 'ok')
+    setSelecionadas(new Set())
+    setModalBaixaLote(false)
+  }
+
+  // ── Excluir com senha ────────────────────────────────────────────────────
+  function pedirSenhaExcluir(h) {
+    setSenhaAlvo(h); setSenhaInput(''); setSenhaErr(false); setModalSenha('excluir-um')
+  }
+  function pedirSenhaExcluirLote() {
+    setSenhaAlvo(null); setSenhaInput(''); setSenhaErr(false); setModalSenha('excluir-lote')
+  }
+  function confirmarSenha() {
+    if (senhaInput !== SENHA_EXCLUIR) { setSenhaErr(true); return }
+    if (modalSenha === 'excluir-um' && senhaAlvo) {
+      updateData(d => ({ ...d, hist: d.hist.filter(x => x.id !== senhaAlvo.id) }))
+      showToast(`🗑️ Etiqueta ${senhaAlvo.num} excluída`, 'ok')
+      setModalVer(null)
+    } else if (modalSenha === 'excluir-lote') {
+      const ids = selecionadas
+      updateData(d => ({ ...d, hist: d.hist.filter(x => !ids.has(x.id)) }))
+      showToast(`🗑️ ${ids.size} etiqueta${ids.size > 1 ? 's' : ''} excluída${ids.size > 1 ? 's' : ''}!`, 'ok')
+      setSelecionadas(new Set())
+    }
+    setModalSenha(null); setSenhaAlvo(null)
+  }
+
+  // ── Editar ───────────────────────────────────────────────────────────────
   function abrirEditar(h) {
     setModalEdit(h)
-    const pesoNum = h.peso ? parseFloat(h.peso.replace(/[^\d.,]/g, '').replace(',', '.')) : ''
-    setEditPeso(isNaN(pesoNum) ? '' : String(pesoNum))
+    const pn = h.peso ? parseFloat(h.peso.replace(/[^\d.,]/g, '').replace(',', '.')) : ''
+    setEditPeso(isNaN(pn) ? '' : String(pn))
     if (h.tipoBaixa === 'descarte') {
-      const dPesoNum = h.descPeso ? parseFloat(h.descPeso.replace(/[^\d.,]/g, '').replace(',', '.')) : ''
-      setEditDescPeso(isNaN(dPesoNum) ? '' : String(dPesoNum))
-      setEditDescMotivo(h.descMotivo || '')
-    } else {
-      setEditDescPeso('')
-      setEditDescMotivo('')
-    }
+      const dn = h.descPeso ? parseFloat(h.descPeso.replace(/[^\d.,]/g, '').replace(',', '.')) : ''
+      setEditDescPeso(isNaN(dn) ? '' : String(dn)); setEditDescMotivo(h.descMotivo || '')
+    } else { setEditDescPeso(''); setEditDescMotivo('') }
   }
 
   function salvarEdicao() {
@@ -109,19 +169,12 @@ export default function PgEtiquetas() {
       hist: d.hist.map(h => h.id === modalEdit.id ? {
         ...h,
         peso: editPeso ? formatPesoKg(editPeso) : '',
-        descPeso: h.tipoBaixa === 'descarte' ? (editDescPeso ? formatPesoKg(editDescPeso) : h.descPeso) : h.descPeso,
+        descPeso:   h.tipoBaixa === 'descarte' ? (editDescPeso ? formatPesoKg(editDescPeso) : h.descPeso) : h.descPeso,
         descMotivo: h.tipoBaixa === 'descarte' ? editDescMotivo.trim() : h.descMotivo,
       } : h)
     }))
     showToast('✓ Etiqueta atualizada!', 'ok')
     setModalEdit(null)
-  }
-
-  function deletar(h) {
-    if (!window.confirm(`Deletar PERMANENTEMENTE a etiqueta ${h.num} (${h.prod})?\n\nEsta ação não pode ser desfeita e a etiqueta será removida de todos os relatórios.`)) return
-    updateData(d => ({ ...d, hist: d.hist.filter(x => x.id !== h.id) }))
-    showToast(`🗑️ Etiqueta ${h.num} deletada`, 'ok')
-    setModalVer(null)
   }
 
   return (
@@ -140,9 +193,33 @@ export default function PgEtiquetas() {
       <div className="panel">
         <div className="panel-hd">
           <h3>📋 Etiquetas em Uso</h3>
-          <input placeholder="🔍 Buscar..." value={busca} onChange={e => setBusca(e.target.value)}
-            style={{padding:'7px 12px',border:'2px solid #e0e3ea',borderRadius:8,fontSize:13,outline:'none',fontFamily:'inherit',width:200}} />
+          <div style={{display:'flex',gap:8,alignItems:'center'}}>
+            <input placeholder="🔍 Buscar..." value={busca} onChange={e => setBusca(e.target.value)}
+              style={{padding:'7px 12px',border:'2px solid #e0e3ea',borderRadius:8,fontSize:13,outline:'none',fontFamily:'inherit',width:180}} />
+            {isAdmin && (
+              numSel > 0
+                ? <button onClick={deselAll} style={{padding:'7px 12px',background:'#e0e3ea',border:'none',borderRadius:8,fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>✕ Limpar ({numSel})</button>
+                : <button onClick={selAll}   style={{padding:'7px 12px',background:'#e0e3ea',border:'none',borderRadius:8,fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>☑ Selecionar Todos</button>
+            )}
+          </div>
         </div>
+
+        {/* Barra de ações em lote */}
+        {isAdmin && numSel > 0 && (
+          <div style={{background:'#1a237e',color:'#fff',padding:'10px 20px',display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
+            <span style={{fontWeight:700,fontSize:13}}>📌 {numSel} etiqueta{numSel>1?'s':''} selecionada{numSel>1?'s':''}</span>
+            <button onClick={abrirBaixaLote} style={{padding:'7px 16px',background:'#43a047',color:'#fff',border:'none',borderRadius:8,fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
+              ✅ Dar Baixa em Lote
+            </button>
+            <button onClick={pedirSenhaExcluirLote} style={{padding:'7px 16px',background:'#c62828',color:'#fff',border:'none',borderRadius:8,fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
+              🗑️ Excluir Selecionadas
+            </button>
+            <button onClick={deselAll} style={{padding:'7px 12px',background:'rgba(255,255,255,.15)',color:'#fff',border:'none',borderRadius:8,fontSize:12,cursor:'pointer',fontFamily:'inherit'}}>
+              ✕ Cancelar
+            </button>
+          </div>
+        )}
+
         <div className="panel-bd">
           <div className="ftabs">
             {TABS.map(([k, l]) => (
@@ -156,17 +233,19 @@ export default function PgEtiquetas() {
             <div className="etv-grid">
               {lista.map(h => (
                 <EtvCard key={h.id} h={h} role={role}
+                  selecionada={selecionadas.has(h.id)}
+                  onToggleSel={toggleSel}
                   onBaixa={abrirBaixa}
                   onVer={setModalVer}
                   onEditar={abrirEditar}
-                  onDeletar={deletar} />
+                  onExcluir={pedirSenhaExcluir} />
               ))}
             </div>
           )}
         </div>
       </div>
 
-      {/* Modal Baixa */}
+      {/* ── Modal Baixa Individual ─────────────────────────────────────────── */}
       {modalBaixa && (
         <div className="modal-ov" onClick={() => setModalBaixa(null)}>
           <div className="modal modal-wide" onClick={e => e.stopPropagation()}>
@@ -176,56 +255,35 @@ export default function PgEtiquetas() {
             </div>
             <div className="modal-bd">
               <p style={{marginBottom:16,color:'#6b7280',fontSize:13}}>{modalBaixa.prod} | Operador: {modalBaixa.op}</p>
-
               {erros.tipo && <p style={{color:'var(--dn)',fontSize:12,marginBottom:8}}>⚠️ Selecione o tipo de baixa</p>}
               <div style={{display:'flex',gap:12,marginBottom:16}}>
-                <button
-                  className={`baixa-tipo-btn${tipoSel==='uso'?' uso-sel':''}`}
-                  onClick={() => { setTipoSel('uso'); setErros(e => ({...e, tipo: false})) }}>
-                  <div className="icn">✅</div>
-                  <div className="lbl">Uso</div>
-                  <div className="sub">Produto utilizado normalmente</div>
+                <button className={`baixa-tipo-btn${tipoSel==='uso'?' uso-sel':''}`} onClick={() => { setTipoSel('uso'); setErros(e => ({...e,tipo:false})) }}>
+                  <div className="icn">✅</div><div className="lbl">Uso</div><div className="sub">Produto utilizado normalmente</div>
                 </button>
-                <button
-                  className={`baixa-tipo-btn${tipoSel==='descarte'?' desc-sel':''}`}
-                  onClick={() => { setTipoSel('descarte'); setErros(e => ({...e, tipo: false})) }}>
-                  <div className="icn">🗑️</div>
-                  <div className="lbl">Descarte</div>
-                  <div className="sub">Produto descartado / perdido</div>
+                <button className={`baixa-tipo-btn${tipoSel==='descarte'?' desc-sel':''}`} onClick={() => { setTipoSel('descarte'); setErros(e => ({...e,tipo:false})) }}>
+                  <div className="icn">🗑️</div><div className="lbl">Descarte</div><div className="sub">Produto descartado / perdido</div>
                 </button>
               </div>
-
               <div className="fg" style={{marginBottom:12}}>
                 <label>Quem está realizando a baixa *</label>
-                <input
-                  value={baixaOp}
-                  onChange={e => { setBaixaOp(e.target.value); setErros(x => ({...x, op: false})) }}
-                  placeholder="Nome do responsável"
-                  style={{border: erros.op ? '2px solid var(--dn)' : ''}} />
+                <input value={baixaOp} onChange={e => { setBaixaOp(e.target.value); setErros(x=>({...x,op:false})) }}
+                  placeholder="Nome do responsável" style={{border:erros.op?'2px solid var(--dn)':''}} />
                 {erros.op && <span style={{color:'var(--dn)',fontSize:11}}>Campo obrigatório</span>}
               </div>
-
               {tipoSel === 'descarte' && (
                 <>
                   <div className="fg" style={{marginBottom:12}}>
                     <label>Motivo do descarte *</label>
-                    <textarea
-                      value={descMotivo}
-                      onChange={e => { setDescMotivo(e.target.value); setErros(x => ({...x, motivo: false})) }}
-                      placeholder="Descreva o motivo do descarte..."
-                      rows={3}
-                      style={{border: erros.motivo ? '2px solid var(--dn)' : '', resize:'vertical'}} />
+                    <textarea value={descMotivo} onChange={e => { setDescMotivo(e.target.value); setErros(x=>({...x,motivo:false})) }}
+                      placeholder="Descreva o motivo..." rows={3} style={{border:erros.motivo?'2px solid var(--dn)':'',resize:'vertical'}} />
                     {erros.motivo && <span style={{color:'var(--dn)',fontSize:11}}>Campo obrigatório</span>}
                   </div>
                   <div className="fg">
                     <label>Peso descartado *</label>
                     <div style={{display:'flex',alignItems:'center',gap:8}}>
-                      <input
-                        type="number" step="0.001" min="0"
-                        value={descPeso}
-                        onChange={e => { setDescPeso(e.target.value); setErros(x => ({...x, peso: false})) }}
-                        placeholder="0.000"
-                        style={{flex:1, border: erros.peso ? '2px solid var(--dn)' : ''}} />
+                      <input type="number" step="0.001" min="0" value={descPeso}
+                        onChange={e => { setDescPeso(e.target.value); setErros(x=>({...x,peso:false})) }}
+                        placeholder="0.000" style={{flex:1,border:erros.peso?'2px solid var(--dn)':''}} />
                       <span style={{fontWeight:700,color:'#6b7280',fontSize:13}}>KG</span>
                     </div>
                     {erros.peso && <span style={{color:'var(--dn)',fontSize:11}}>Campo obrigatório</span>}
@@ -235,27 +293,102 @@ export default function PgEtiquetas() {
             </div>
             <div className="modal-ft">
               <button className="btn btn-gy" onClick={() => setModalBaixa(null)}>Cancelar</button>
-              <button
-                className="btn"
-                style={{background: tipoSel==='descarte'?'#7b1fa2':'var(--p)', color:'#fff'}}
-                onClick={confirmarBaixa}>
-                {tipoSel === 'descarte' ? '🗑️ Registrar Descarte' : tipoSel === 'uso' ? '✅ Confirmar Uso' : 'Confirmar Baixa'}
+              <button className="btn" style={{background:tipoSel==='descarte'?'#7b1fa2':'var(--p)',color:'#fff'}} onClick={confirmarBaixa}>
+                {tipoSel==='descarte'?'🗑️ Registrar Descarte':tipoSel==='uso'?'✅ Confirmar Uso':'Confirmar Baixa'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Modal Ver */}
+      {/* ── Modal Baixa em Lote ────────────────────────────────────────────── */}
+      {modalBaixaLote && (
+        <div className="modal-ov" onClick={() => setModalBaixaLote(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-hd">
+              <h3>✅ Baixa em Lote — {numSel} etiqueta{numSel>1?'s':''}</h3>
+              <button className="modal-cl" onClick={() => setModalBaixaLote(false)}>×</button>
+            </div>
+            <div className="modal-bd">
+              <div style={{display:'flex',gap:12,marginBottom:16}}>
+                <button className={`baixa-tipo-btn${loteTipo==='uso'?' uso-sel':''}`} onClick={() => setLoteTipo('uso')}>
+                  <div className="icn">✅</div><div className="lbl">Uso</div><div className="sub">Utilizado normalmente</div>
+                </button>
+                <button className={`baixa-tipo-btn${loteTipo==='descarte'?' desc-sel':''}`} onClick={() => setLoteTipo('descarte')}>
+                  <div className="icn">🗑️</div><div className="lbl">Descarte</div><div className="sub">Produto descartado</div>
+                </button>
+              </div>
+              <div className="fg" style={{marginBottom:12}}>
+                <label>Responsável pela baixa *</label>
+                <input value={loteOp} onChange={e => { setLoteOp(e.target.value); setLoteErros(x=>({...x,op:false})) }}
+                  placeholder="Nome do responsável" style={{border:loteErros.op?'2px solid var(--dn)':''}} />
+                {loteErros.op && <span style={{color:'var(--dn)',fontSize:11}}>Campo obrigatório</span>}
+              </div>
+              {loteTipo === 'descarte' && (
+                <div className="fg">
+                  <label>Motivo do descarte *</label>
+                  <textarea value={loteMotivo} onChange={e => { setLoteMotivo(e.target.value); setLoteErros(x=>({...x,motivo:false})) }}
+                    placeholder="Motivo aplicado a todas as etiquetas..." rows={3} style={{border:loteErros.motivo?'2px solid var(--dn)':'',resize:'vertical'}} />
+                  {loteErros.motivo && <span style={{color:'var(--dn)',fontSize:11}}>Campo obrigatório</span>}
+                </div>
+              )}
+            </div>
+            <div className="modal-ft">
+              <button className="btn btn-gy" onClick={() => setModalBaixaLote(false)}>Cancelar</button>
+              <button className="btn" style={{background:loteTipo==='descarte'?'#7b1fa2':'var(--p)',color:'#fff'}} onClick={confirmarBaixaLote}>
+                {loteTipo==='descarte'?'🗑️ Registrar Descarte em Lote':'✅ Confirmar Baixa em Lote'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Senha para Excluir ───────────────────────────────────────── */}
+      {modalSenha && (
+        <div className="modal-ov" onClick={() => setModalSenha(null)}>
+          <div className="modal" style={{maxWidth:360}} onClick={e => e.stopPropagation()}>
+            <div className="modal-hd">
+              <h3>🔒 Confirmar Exclusão</h3>
+              <button className="modal-cl" onClick={() => setModalSenha(null)}>×</button>
+            </div>
+            <div className="modal-bd">
+              <p style={{marginBottom:16,fontSize:13,color:'#6b7280'}}>
+                {modalSenha === 'excluir-lote'
+                  ? `⚠️ Isto excluirá permanentemente ${numSel} etiqueta${numSel>1?'s':''}. Esta ação não pode ser desfeita.`
+                  : `⚠️ Isto excluirá permanentemente a etiqueta ${senhaAlvo?.num} (${senhaAlvo?.prod}). Esta ação não pode ser desfeita.`}
+              </p>
+              <div className="fg">
+                <label>Digite a senha para confirmar</label>
+                <input
+                  type="password"
+                  value={senhaInput}
+                  onChange={e => { setSenhaInput(e.target.value); setSenhaErr(false) }}
+                  onKeyDown={e => e.key === 'Enter' && confirmarSenha()}
+                  placeholder="••••"
+                  autoFocus
+                  style={{border: senhaErr ? '2px solid #c62828' : '', fontSize:20, letterSpacing:6, textAlign:'center'}}
+                />
+                {senhaErr && <span style={{color:'#c62828',fontSize:12,fontWeight:700}}>⚠️ Senha incorreta</span>}
+              </div>
+            </div>
+            <div className="modal-ft">
+              <button className="btn btn-gy" onClick={() => setModalSenha(null)}>Cancelar</button>
+              <button className="btn btn-dn" onClick={confirmarSenha}>🗑️ Excluir</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Ver ─────────────────────────────────────────────────────── */}
       {modalVer && (
         <ModalVer h={modalVer} role={role}
           onClose={() => setModalVer(null)}
           onBaixa={h => { setModalVer(null); abrirBaixa(h) }}
           onEditar={h => { setModalVer(null); abrirEditar(h) }}
-          onDeletar={deletar} />
+          onExcluir={h => { setModalVer(null); pedirSenhaExcluir(h) }} />
       )}
 
-      {/* Modal Editar (admin) */}
+      {/* ── Modal Editar ──────────────────────────────────────────────────── */}
       {modalEdit && (
         <div className="modal-ov" onClick={() => setModalEdit(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
@@ -285,8 +418,7 @@ export default function PgEtiquetas() {
                   </div>
                   <div className="fg">
                     <label>Motivo do descarte</label>
-                    <textarea value={editDescMotivo} onChange={e => setEditDescMotivo(e.target.value)}
-                      rows={3} style={{resize:'vertical'}} />
+                    <textarea value={editDescMotivo} onChange={e => setEditDescMotivo(e.target.value)} rows={3} style={{resize:'vertical'}} />
                   </div>
                 </>
               )}
@@ -302,81 +434,72 @@ export default function PgEtiquetas() {
   )
 }
 
-function EtvCard({ h, role, onBaixa, onVer, onEditar, onDeletar }) {
+function EtvCard({ h, role, selecionada, onToggleSel, onBaixa, onVer, onEditar, onExcluir }) {
   const d = du(h.val)
-  const vencida = h.val && d < 0
+  const vencida  = h.val && d < 0
   const vencendo = !vencida && h.val && d >= 0 && d <= 2
-  const isDesc = h.tipoBaixa === 'descarte'
+  const isDesc   = h.tipoBaixa === 'descarte'
+  const isAdmin  = role === 'admin'
 
   let cls = 'etv-card'
   if (h.baixada) cls += isDesc ? ' descartada' : ' baixada'
-  else if (vencida) cls += ' vencida'
+  else if (vencida)  cls += ' vencida'
   else if (vencendo) cls += ' vencendo'
 
   let statusBadge
-  if (h.baixada) {
-    statusBadge = isDesc
-      ? <span className="badge b-desc">Descartada</span>
-      : <span className="badge b-baixa">Baixa / Uso</span>
-  } else if (vencida) {
-    statusBadge = <span className="badge b-dn">Vencida</span>
-  } else if (vencendo) {
-    statusBadge = <span className="badge b-wn">Vence em {d}d</span>
-  } else {
-    statusBadge = <span className="badge b-ok">Ativa</span>
-  }
+  if (h.baixada)     statusBadge = isDesc ? <span className="badge b-desc">Descartada</span> : <span className="badge b-baixa">Baixa / Uso</span>
+  else if (vencida)  statusBadge = <span className="badge b-dn">Vencida</span>
+  else if (vencendo) statusBadge = <span className="badge b-wn">Vence em {d}d</span>
+  else               statusBadge = <span className="badge b-ok">Ativa</span>
 
   return (
-    <div className={cls}>
+    <div className={cls} style={{position:'relative'}}>
       <div className="etv-header">
+        {isAdmin && (
+          <input type="checkbox" checked={selecionada} onChange={() => onToggleSel(h.id)}
+            onClick={e => e.stopPropagation()}
+            style={{width:16,height:16,accentColor:'#1565c0',cursor:'pointer',flexShrink:0,marginRight:4}} />
+        )}
         <span className="etv-num">{h.num}</span>
         {statusBadge}
       </div>
       <div className="etv-body">
         <div className="etv-prod">{h.prod}</div>
-        <div className="etv-grp" style={{color: h.grpCor || '#999'}}>{h.grp}</div>
+        <div className="etv-grp" style={{color:h.grpCor||'#999'}}>{h.grp}</div>
         <div className="etv-datas">
           <div className="etv-d"><label>Abertura</label><span>{fd(h.manip)}</span></div>
-          <div className="etv-d"><label>Validade</label><span className={vencida ? 'etv-val-v' : ''}>{fd(h.val)}</span></div>
+          <div className="etv-d"><label>Validade</label><span className={vencida?'etv-val-v':''}>{fd(h.val)}</span></div>
         </div>
-        {h.ingr && (
-          <div className="etv-ingr">
-            <b>Ingredientes: </b>{h.ingr}
-          </div>
-        )}
         {h.peso && <div className="etv-peso">⚖ Peso: <b>{h.peso}</b></div>}
-        {h.obs && <div className="etv-obs">{h.obs}</div>}
+        {h.obs  && <div className="etv-obs">{h.obs}</div>}
         <div className="etv-foot">
           <span className="etv-op">👤 {h.op}</span>
           <span className="etv-qty">{new Date(h.at).toLocaleString('pt-BR')}</span>
         </div>
         {h.baixada && (
           <div style={{fontSize:10,color:isDesc?'#7b1fa2':'var(--p)',marginTop:5,padding:'5px 8px',background:isDesc?'#f3e5f5':'#e8f5ee',borderRadius:6}}>
-            {isDesc ? '🗑️ Descartado' : '✅ Dado baixa / uso'} em {new Date(h.baixadaEm).toLocaleString('pt-BR')} por <b>{h.baixadaPor}</b>
+            {isDesc?'🗑️ Descartado':'✅ Dado baixa / uso'} em {new Date(h.baixadaEm).toLocaleString('pt-BR')} por <b>{h.baixadaPor}</b>
             {isDesc && h.descMotivo && <><br /><i style={{fontSize:9}}>Motivo: {h.descMotivo}</i></>}
-            {isDesc && h.descPeso && <><br /><b style={{fontSize:10}}>Peso descartado: {h.descPeso}</b></>}
+            {isDesc && h.descPeso   && <><br /><b style={{fontSize:10}}>Peso descartado: {h.descPeso}</b></>}
           </div>
         )}
       </div>
       <div className="etv-actions">
         {!h.baixada && <button className="bti baixa" onClick={() => onBaixa(h)}>✅ Dar Baixa</button>}
         <button className="bti ed" onClick={() => onVer(h)}>📷 Ver</button>
-        {role === 'admin' && <button className="bti ed" onClick={() => onEditar(h)}>✏️ Editar</button>}
-        {role === 'admin' && <button className="bti dl" onClick={() => onDeletar(h)}>🗑️ Deletar</button>}
+        {isAdmin && <button className="bti ed" onClick={() => onEditar(h)}>✏️ Editar</button>}
+        {isAdmin && <button className="bti dl" onClick={() => onExcluir(h)}>🗑️ Excluir</button>}
       </div>
-      {h.baixada && (
-        <div className={`etv-stamp ${isDesc ? 'desc' : 'uso'}`}>
-          {isDesc ? 'DESCARTADA' : 'BAIXADA'}
-        </div>
-      )}
+      {h.baixada && <div className={`etv-stamp ${isDesc?'desc':'uso'}`}>{isDesc?'DESCARTADA':'BAIXADA'}</div>}
     </div>
   )
 }
 
-function ModalVer({ h, role, onClose, onBaixa, onEditar, onDeletar }) {
+function ModalVer({ h, role, onClose, onBaixa, onEditar, onExcluir }) {
   const d = du(h.val)
   const vencida = h.val && d < 0
-  const isDesc = h.tipoBaixa === 'descarte'
+  const isDesc  = h.tipoBaixa === 'descarte'
+  const isAdmin = role === 'admin'
 
   return (
     <div className="modal-ov" onClick={onClose}>
@@ -394,40 +517,29 @@ function ModalVer({ h, role, onClose, onBaixa, onEditar, onDeletar }) {
             <div style={{fontSize:26,fontWeight:900,marginBottom:4}}>{h.prod}</div>
             <div style={{fontSize:13,fontWeight:700,color:h.grpCor||'#999',marginBottom:14}}>{h.grp}</div>
             <div style={{display:'grid',gridTemplateColumns:`1fr 1fr${h.peso?' 1fr':''}`,gap:12,background:'#f5f6fa',borderRadius:10,padding:12,marginBottom:12}}>
-              <div>
-                <div style={{fontSize:10,fontWeight:800,color:'#888',textTransform:'uppercase',marginBottom:3}}>Abertura</div>
-                <div style={{fontSize:20,fontWeight:900}}>{fd(h.manip)}</div>
-              </div>
-              <div>
-                <div style={{fontSize:10,fontWeight:800,color:'#888',textTransform:'uppercase',marginBottom:3}}>Validade</div>
-                <div style={{fontSize:20,fontWeight:900,color:vencida?'var(--dn)':'var(--tx)'}}>{fd(h.val)}</div>
-              </div>
-              {h.peso && (
-                <div>
-                  <div style={{fontSize:10,fontWeight:800,color:'#888',textTransform:'uppercase',marginBottom:3}}>Peso</div>
-                  <div style={{fontSize:20,fontWeight:900}}>{h.peso}</div>
-                </div>
-              )}
+              <div><div style={{fontSize:10,fontWeight:800,color:'#888',textTransform:'uppercase',marginBottom:3}}>Abertura</div><div style={{fontSize:20,fontWeight:900}}>{fd(h.manip)}</div></div>
+              <div><div style={{fontSize:10,fontWeight:800,color:'#888',textTransform:'uppercase',marginBottom:3}}>Validade</div><div style={{fontSize:20,fontWeight:900,color:vencida?'var(--dn)':'var(--tx)'}}>{fd(h.val)}</div></div>
+              {h.peso && <div><div style={{fontSize:10,fontWeight:800,color:'#888',textTransform:'uppercase',marginBottom:3}}>Peso</div><div style={{fontSize:20,fontWeight:900}}>{h.peso}</div></div>}
             </div>
             {h.ingr && <div style={{fontSize:12,background:'#fff8f0',borderLeft:'3px solid #e67e00',padding:'8px 12px',borderRadius:5,marginBottom:8}}><b style={{color:'#e67e00',fontSize:11,textTransform:'uppercase'}}>Ingredientes:</b> {h.ingr}</div>}
-            {h.obs && <div style={{fontSize:12,color:'#888',fontStyle:'italic',marginBottom:8}}>{h.obs}</div>}
+            {h.obs  && <div style={{fontSize:12,color:'#888',fontStyle:'italic',marginBottom:8}}>{h.obs}</div>}
             <div style={{display:'flex',justifyContent:'space-between',borderTop:'1px solid #ddd',paddingTop:10,fontSize:12,color:'#666'}}>
               <span><b>Operador:</b> {h.op}</span>
               <span>{new Date(h.at).toLocaleString('pt-BR')}</span>
             </div>
             {h.baixada && (
               <div style={{marginTop:10,padding:'10px 14px',background:isDesc?'#f3e5f5':'#e8f5ee',borderRadius:8,fontSize:12,color:isDesc?'#7b1fa2':'var(--p)'}}>
-                <b>{isDesc ? '🗑️ Descartada' : '✅ Baixada / Uso'}</b> em {new Date(h.baixadaEm).toLocaleString('pt-BR')} por <b>{h.baixadaPor}</b>
+                <b>{isDesc?'🗑️ Descartada':'✅ Baixada / Uso'}</b> em {new Date(h.baixadaEm).toLocaleString('pt-BR')} por <b>{h.baixadaPor}</b>
                 {isDesc && h.descMotivo && <><br />Motivo: <i>{h.descMotivo}</i></>}
-                {isDesc && h.descPeso && <><br />Peso descartado: <b>{h.descPeso}</b></>}
+                {isDesc && h.descPeso   && <><br />Peso descartado: <b>{h.descPeso}</b></>}
               </div>
             )}
           </div>
         </div>
         <div className="modal-ft">
           {!h.baixada && <button className="btn btn-p" onClick={() => onBaixa(h)}>✅ Dar Baixa</button>}
-          {role === 'admin' && <button className="btn" style={{background:'#1976d2',color:'#fff'}} onClick={() => onEditar(h)}>✏️ Editar</button>}
-          {role === 'admin' && <button className="btn btn-dn" onClick={() => onDeletar(h)}>🗑️ Deletar</button>}
+          {isAdmin && <button className="btn" style={{background:'#1976d2',color:'#fff'}} onClick={() => onEditar(h)}>✏️ Editar</button>}
+          {isAdmin && <button className="btn btn-dn" onClick={() => onExcluir(h)}>🗑️ Excluir</button>}
           <button className="btn btn-o" onClick={onClose}>Fechar</button>
         </div>
       </div>

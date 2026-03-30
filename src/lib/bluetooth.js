@@ -54,30 +54,62 @@ function fdtCpcl(s) {
 }
 
 function buildCpcl(h, qty = 1) {
-  // Job CPCL: último campo do header = quantidade de cópias
-  // A impressora avança a etiqueta automaticamente entre cada cópia
+  const agora = new Date()
+  const hora  = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+
+  // Centraliza o nome na largura útil (~640 dots conservador para etiqueta 10cm)
+  // font4 = 16 dots/char, SETMAG 1 3 não altera largura
+  function cx(text) {
+    const w = Math.min(text.length, 40) * 16
+    return Math.max(10, Math.floor((640 - w) / 2))
+  }
+
   const lines = [`! 0 200 200 400 ${qty}`]
-  let y = 5
+  let y = 12
+
+  // ── OPÇÃO 1 ────────────────────────────────────────────────────────────
+  // Nome do produto: 3× altura, negrito, centralizado
+  const prod = normCpcl(h.prod || h.produto || '').toUpperCase()
+  lines.push('SETMAG 1 3')
   lines.push('SETBOLD 1')
-  lines.push(`TEXT 4 0 10 ${y} ${normCpcl(h.prod || h.produto || '')}`)
+  lines.push(`TEXT 4 0 ${cx(prod)} ${y} ${prod}`)
   lines.push('SETBOLD 0')
-  y += 30
-  if (h.grp) { lines.push(`TEXT 4 0 10 ${y} Grupo: ${normCpcl(h.grp)}`); y += 28 }
-  lines.push(`TEXT 4 0 10 ${y} ----------------------------------------`); y += 28
-  lines.push(`TEXT 4 0 10 ${y} Abertura : ${fdtCpcl(h.manip || h.fabricacao)}`); y += 28
-  lines.push(`TEXT 4 0 10 ${y} Validade : ${fdtCpcl(h.val || h.validade)}`); y += 28
-  if (h.peso)   { lines.push(`TEXT 4 0 10 ${y} Peso     : ${normCpcl(h.peso)}`); y += 28 }
-  if (h.conserv && y < 365) { lines.push(`TEXT 4 0 10 ${y} ${normCpcl(h.conserv)}`); y += 28 }
-  if (h.op && y < 365)  { lines.push(`TEXT 4 0 10 ${y} Operador : ${normCpcl(h.op || h.operador || '')}`); y += 28 }
-  if (h.obs && y < 365) { lines.push(`TEXT 4 0 10 ${y} ${normCpcl(h.obs)}`); y += 28 }
+  lines.push('SETMAG 1 1')
+  y += 82   // 72 dots (3×24) + 10 margem
+
+  // Grupo: fonte normal pequena, discreta — não compete com o nome
+  if (h.grp) {
+    lines.push(`TEXT 4 0 15 ${y} ${normCpcl(h.grp)}`)
+    y += 28
+  }
+
+  // Separador
+  lines.push(`TEXT 4 0 10 ${y} ----------------------------------------`)
+  y += 28
+
+  // Corpo: 2× altura para leitura fácil
+  lines.push('SETMAG 1 2')
+  lines.push(`TEXT 4 0 10 ${y} Abertura : ${fdtCpcl(h.manip || h.fabricacao)}`);  y += 46
+  lines.push(`TEXT 4 0 10 ${y} Validade : ${fdtCpcl(h.val || h.validade)}`)
+  if (h.peso) lines.push(`TEXT 4 0 480 ${y} ${normCpcl(h.peso)}`)
+  y += 46
+  if (h.conserv && y < 358) { lines.push(`TEXT 4 0 10 ${y} ${normCpcl(h.conserv)}`);                              y += 46 }
+  if (h.op      && y < 358) { lines.push(`TEXT 4 0 10 ${y} Operador : ${normCpcl(h.op || h.operador || '')}`);    y += 46 }
+  if (h.obs     && y < 358) { lines.push(`TEXT 4 0 10 ${y} ${normCpcl(h.obs)}`);                                  y += 46 }
+
+  // Rodapé: tamanho normal — hora + número da etiqueta
+  lines.push('SETMAG 1 1')
+  if (y < 388) {
+    const num = normCpcl(h.num || '')
+    lines.push(`TEXT 4 0 10 ${y} ${hora}${num ? '   ' + num : ''}`)
+  }
+
   lines.push('FORM')
   lines.push('PRINT')
   return lines.join('\r\n') + '\r\n'
 }
 
 function sendRawBT(text) {
-  // Usa <a> click para não navegar a página (window.location.href pode ser
-  // coalesced pelo Chrome e matar os timers de cópias subsequentes)
   const a = document.createElement('a')
   a.href = 'rawbt:' + encodeURIComponent(text)
   a.style.display = 'none'
@@ -141,9 +173,17 @@ function buildPlainText(h) {
 
 export function printViaRawBT(h) {
   const lista = Array.isArray(h) ? h : [h]
-  // Um único job CPCL com qty=N no header → impressora avança etiqueta automaticamente
-  // Usa o primeiro item como conteúdo (todas as cópias são idênticas em conteúdo)
-  sendRawBT(buildCpcl(lista[0], lista.length))
+  const content = Array.from({ length: lista.length }, () => buildPlainText(lista[0])).join('\x0C')
+  sendRawBT(content)
+}
+
+// ── Impressão BLE direta via CPCL ─────────────────────────────────────────
+// Envia CPCL direto para a impressora via BLE — sem RawBT, sem intermediário.
+// O header "! 0 200 200 400 N" faz a impressora imprimir N cópias automaticamente.
+export async function printLabelsCpcl(char, h, qty = 1) {
+  const cpcl = buildCpcl(h, qty)
+  const bytes = new TextEncoder().encode(cpcl)
+  await writeChunked(char, bytes)
 }
 
 export function testViaRawBT() {

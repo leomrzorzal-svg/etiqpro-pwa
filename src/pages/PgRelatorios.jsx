@@ -38,18 +38,28 @@ function gerarPdfRelatorio(lista, filtros) {
   }).join('')
   const filtroHtml = Object.entries(filtros).filter(([,v]) => v).map(([k,v]) => `<span style="background:#fff3e0;color:#e67e00;padding:2px 8px;border-radius:10px;font-size:11px;margin-right:6px"><b>${k}:</b> ${v}</span>`).join('')
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório etiqPRO</title>
-<style>body{font-family:Arial,sans-serif;font-size:12px;padding:20px;color:#222}
+<style>
+body{font-family:Arial,sans-serif;font-size:12px;padding:20px;color:#222}
 h1{font-size:18px;color:#e67e00;margin-bottom:4px}
-.sub{font-size:12px;color:#888;margin-bottom:16px}
+.sub{font-size:12px;color:#888;margin-bottom:12px}
 table{width:100%;border-collapse:collapse;margin-top:12px}
 th{background:#f5f6fa;padding:8px 10px;text-align:left;font-size:10px;text-transform:uppercase;border-bottom:2px solid #ddd}
 td{padding:7px 10px;border-bottom:1px solid #eee;font-size:11px}
-@media print{body{padding:8px}}</style></head><body>
+.toolbar{display:flex;gap:10px;margin-bottom:16px}
+.btn{padding:10px 22px;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+.btn-p{background:#e67e00;color:#fff}
+.btn-c{background:#e0e3ea;color:#333}
+@media print{.toolbar{display:none}body{padding:8px}}
+</style></head><body>
+<div class="toolbar">
+  <button class="btn btn-p" onclick="window.print()">🖨️ Imprimir</button>
+  <button class="btn btn-c" onclick="window.close()">✕ Fechar e Voltar</button>
+</div>
 <h1>📊 Relatório de Etiquetas — etiqPRO</h1>
 <div class="sub">Gerado em ${new Date().toLocaleString('pt-BR')} &nbsp;|&nbsp; ${lista.length} etiqueta${lista.length!==1?'s':''}</div>
 ${filtroHtml ? `<div style="margin-bottom:12px">${filtroHtml}</div>` : ''}
 <table><thead><tr><th>#</th><th>Produto</th><th>Grupo</th><th>Abertura</th><th>Validade</th><th>Operador</th><th>Peso</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>
-<script>window.onload=function(){window.print()}<\/script></body></html>`)
+</body></html>`)
   w.document.close()
 }
 

@@ -203,11 +203,14 @@ export default function App() {
     showToast('Impressora desconectada', '')
   }
 
-  async function printBT(h, qty = 1) {
+  async function printBT(labels) {
     if (!btCharRef.current) return showToast('Impressora não conectada', 'erro')
+    const lista = Array.isArray(labels) ? labels : [labels]
     try {
-      await printLabelsCpcl(btCharRef.current, h, qty)
-      showToast(`✓ ${qty > 1 ? qty + ' cópias impressas' : 'Impresso'} via Bluetooth!`, 'ok')
+      for (const h of lista) {
+        await printLabelsCpcl(btCharRef.current, h, 1)
+      }
+      showToast(`✓ ${lista.length > 1 ? lista.length + ' etiquetas impressas' : 'Impresso'} via Bluetooth!`, 'ok')
     } catch (e) {
       setBtStatus('error')
       showToast('Erro ao imprimir: ' + e.message, 'erro')

@@ -87,21 +87,22 @@ export default function PgImprimir() {
     const g = data.grps.find(x => x.id == p.grp) || { nome: 'Sem grupo', cor: '#999' }
     const valDate = p.vDias ? calcVal(p.vDias) : ''
     const pesoFmt = peso ? formatPesoKg(peso) : ''
-    const counter = (data.counter || 0) + 1
-    const num = nextNum(counter)
-    const h = {
-      id: Date.now(), num,
-      prod: p.nome, grp: g.nome, grpCor: g.cor,
-      ingr: p.ingr||'', obs: p.obs||'', conserv: p.conserv||'',
-      manip: hoje, val: valDate, op: opNome, peso: pesoFmt,
-      at: new Date().toISOString(),
-      baixada: false, baixadaEm: null, baixadaPor: null, tipoBaixa: null, descMotivo: null, descPeso: null,
+    const novas = []
+    for (let i = 0; i < qty; i++) {
+      const counter = (data.counter || 0) + 1 + i
+      const num = nextNum(counter)
+      novas.push({
+        id: Date.now() + i, num,
+        prod: p.nome, grp: g.nome, grpCor: g.cor,
+        ingr: p.ingr||'', obs: p.obs||'', conserv: p.conserv||'',
+        manip: hoje, val: valDate, op: opNome, peso: pesoFmt,
+        at: new Date().toISOString(),
+        baixada: false, baixadaEm: null, baixadaPor: null, tipoBaixa: null, descMotivo: null, descPeso: null,
+      })
     }
-    // Registra todas as cópias no histórico
-    const novas = Array.from({ length: qty }, (_, i) => ({ ...h, id: Date.now() + i, num: nextNum(counter + i) }))
     updateData(d => ({ ...d, counter: (d.counter || 0) + qty, hist: [...novas, ...d.hist] }))
-    // Envia um único job CPCL com qty=N — a impressora imprime N etiquetas separadas
-    await printBT(h, qty)
+    // Envia cada etiqueta separadamente via CPCL — cada uma com seu número
+    await printBT(novas)
     setModal(false)
   }
 

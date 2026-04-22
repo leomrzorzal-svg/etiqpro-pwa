@@ -37,7 +37,7 @@ export default function LoginPage() {
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
-        <p style={{color:'#aaa',fontSize:11,marginTop:20}}>etiqPRO v2.0 · PWA + Supabase</p>
+        <p style={{color:'#aaa',fontSize:11,marginTop:20}}>etiqPRO v2.1-btfix · PWA + Supabase</p>
       </div>
     </div>
   )

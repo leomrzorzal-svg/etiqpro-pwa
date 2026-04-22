@@ -208,6 +208,7 @@ export default function App() {
     const lista = Array.isArray(labels) ? labels : [labels]
     try {
       for (let i = 0; i < lista.length; i++) {
+        if (lista.length > 1) showToast(`Enviando ${i+1}/${lista.length}: ${lista[i].num}`, '', 2000)
         await printLabelsCpcl(btCharRef.current, lista[i], 1)
         // Aguarda impressora terminar antes de enviar próxima — evita sobrescrever buffer e gerar cópias com mesmo número
         if (i < lista.length - 1) {

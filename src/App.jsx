@@ -1,6 +1,6 @@
 import React, { useState, createContext, useContext, useEffect, useRef } from 'react'
 import { supabase } from './lib/supabase'
-import { btSupported, connectPrinter, printLabel, printLabelsCpcl, testPrint, simplePrintTest, printViaRawBT, testViaRawBT, calibratePrint } from './lib/bluetooth'
+import { btSupported, connectPrinter, reconnectPrinter, printLabel, printLabelsCpcl, testPrint, simplePrintTest, printViaRawBT, testViaRawBT, calibratePrint } from './lib/bluetooth'
 
 export const AppCtx = createContext({})
 export const useApp = () => useContext(AppCtx)
@@ -204,12 +204,26 @@ export default function App() {
   }
 
   async function printBT(labels) {
-    if (!btCharRef.current) return showToast('Impressora não conectada', 'erro')
+    if (!btDeviceRef.current) return showToast('Impressora não conectada', 'erro')
     const lista = Array.isArray(labels) ? labels : [labels]
     try {
-      if (lista.length > 1) showToast(`Imprimindo ${lista.length}: ${lista.map(x => x.num).join(', ')}`, '', 4000)
-      // Envia tudo num único stream com form-feed entre etiquetas
-      await printLabelsCpcl(btCharRef.current, lista, 1)
+      for (let i = 0; i < lista.length; i++) {
+        // Reconecta BLE antes de cada etiqueta (exceto primeira se já conectado) —
+        // força a impressora a tratar cada job como sessão nova, evitando
+        // buffer compartilhado que faz todas saírem com o último número.
+        if (i > 0 || !btCharRef.current) {
+          try { btDeviceRef.current.gatt.disconnect() } catch {}
+          await new Promise(r => setTimeout(r, 600))
+          btCharRef.current = await reconnectPrinter(btDeviceRef.current)
+        }
+        showToast(`Imprimindo ${i+1}/${lista.length}: ${lista[i].num}`, '', 3000)
+        await printLabelsCpcl(btCharRef.current, lista[i], 1)
+        // Pequena pausa para impressora físicamente terminar antes da reconexão
+        if (i < lista.length - 1) {
+          await new Promise(r => setTimeout(r, 1500))
+        }
+      }
+      setBtStatus('connected')
       showToast(`✓ ${lista.length > 1 ? lista.length + ' etiquetas impressas' : 'Impresso'} via Bluetooth!`, 'ok')
     } catch (e) {
       setBtStatus('error')
@@ -685,7 +699,7 @@ function LoginScreen({ onLogin, syncInfo }) {
         }}>
           Entrar no Sistema
         </button>
-        <p style={{color:'#aaa', fontSize:11, marginTop:16, textAlign:'center'}}>etiqPRO v2.2-bundle</p>
+        <p style={{color:'#aaa', fontSize:11, marginTop:16, textAlign:'center'}}>etiqPRO v2.3-reconn</p>
       </div>
     </div>
   )

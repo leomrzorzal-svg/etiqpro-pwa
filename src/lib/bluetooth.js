@@ -179,15 +179,9 @@ export function printViaRawBT(h) {
 
 // ── Impressão BLE direta via CPCL ─────────────────────────────────────────
 // Envia CPCL direto para a impressora via BLE — sem RawBT, sem intermediário.
-// Aceita 1 etiqueta ou array. Quando array, junta tudo em 1 envio com
-// form-feed (\x0C) entre blocos — força firmware a commitar cada etiqueta
-// antes da próxima, evitando que o buffer seja sobrescrito e todas saiam
-// com o último número.
 export async function printLabelsCpcl(char, h, qty = 1) {
-  const lista = Array.isArray(h) ? h : [h]
-  const cpcl = lista.map(item => buildCpcl(item, qty)).join('\x0C')
-  console.log('[CPCL] enviando', lista.length, 'etiqueta(s):', lista.map(x => x.num).join(', '))
-  console.log(cpcl)
+  const cpcl = buildCpcl(h, qty)
+  console.log('[CPCL] enviando etiqueta', h.num)
   const bytes = new TextEncoder().encode(cpcl)
   await writeChunked(char, bytes)
 }
@@ -215,48 +209,50 @@ export function calibratePrint() {
   sendRawBT(lines.join('\r\n') + '\r\n')
 }
 
+async function findWriteChar(server) {
+  // 1ª tentativa: UUIDs conhecidos
+  for (const svcUuid of BT_SERVICES) {
+    try {
+      const svc = await server.getPrimaryService(svcUuid)
+      for (const charUuid of BT_CHARS) {
+        try {
+          const c = await svc.getCharacteristic(charUuid)
+          if (c.properties.write || c.properties.writeWithoutResponse) return c
+        } catch {}
+      }
+    } catch {}
+  }
+  // 2ª tentativa: varre TODOS os serviços
+  for (const svcUuid of BT_SERVICES) {
+    try {
+      const svc = await server.getPrimaryService(svcUuid)
+      const all = await svc.getCharacteristics()
+      for (const c of all) {
+        if (c.properties.write || c.properties.writeWithoutResponse) return c
+      }
+    } catch {}
+  }
+  return null
+}
+
 export async function connectPrinter() {
   const device = await navigator.bluetooth.requestDevice({
     acceptAllDevices: true,
     optionalServices: BT_SERVICES,
   })
   const server = await device.gatt.connect()
-  let char = null
-
-  // 1ª tentativa: UUIDs conhecidos com verificação de permissão de escrita
-  for (const svcUuid of BT_SERVICES) {
-    if (char) break
-    try {
-      const svc = await server.getPrimaryService(svcUuid)
-      for (const charUuid of BT_CHARS) {
-        try {
-          const c = await svc.getCharacteristic(charUuid)
-          if (c.properties.write || c.properties.writeWithoutResponse) {
-            char = c; break
-          }
-        } catch {}
-      }
-    } catch {}
-  }
-
-  // 2ª tentativa: varre TODOS os serviços e pega qualquer característica escrita
-  if (!char) {
-    for (const svcUuid of BT_SERVICES) {
-      if (char) break
-      try {
-        const svc = await server.getPrimaryService(svcUuid)
-        const all = await svc.getCharacteristics()
-        for (const c of all) {
-          if (c.properties.write || c.properties.writeWithoutResponse) {
-            char = c; break
-          }
-        }
-      } catch {}
-    }
-  }
-
+  const char = await findWriteChar(server)
   if (!char) throw new Error('Nenhuma característica de escrita encontrada. Verifique se a impressora suporta BLE.')
   return { device, char }
+}
+
+// Reconecta sem diálogo de pareamento — só funciona se o device já foi
+// pareado nesta sessão (device ref ainda valido).
+export async function reconnectPrinter(device) {
+  const server = await device.gatt.connect()
+  const char = await findWriteChar(server)
+  if (!char) throw new Error('Característica não encontrada após reconexão')
+  return char
 }
 
 // ── ESC/POS builder ───────────────────────────────────────────────────────

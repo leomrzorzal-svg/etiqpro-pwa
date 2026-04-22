@@ -179,9 +179,15 @@ export function printViaRawBT(h) {
 
 // ── Impressão BLE direta via CPCL ─────────────────────────────────────────
 // Envia CPCL direto para a impressora via BLE — sem RawBT, sem intermediário.
+// Aceita 1 etiqueta ou array. Quando array, junta tudo em 1 envio com
+// form-feed (\x0C) entre blocos — força firmware a commitar cada etiqueta
+// antes da próxima, evitando que o buffer seja sobrescrito e todas saiam
+// com o último número.
 export async function printLabelsCpcl(char, h, qty = 1) {
-  const cpcl = buildCpcl(h, qty)
-  console.log('[CPCL] enviando etiqueta', h.num, '\n', cpcl)
+  const lista = Array.isArray(h) ? h : [h]
+  const cpcl = lista.map(item => buildCpcl(item, qty)).join('\x0C')
+  console.log('[CPCL] enviando', lista.length, 'etiqueta(s):', lista.map(x => x.num).join(', '))
+  console.log(cpcl)
   const bytes = new TextEncoder().encode(cpcl)
   await writeChunked(char, bytes)
 }

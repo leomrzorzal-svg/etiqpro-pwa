@@ -207,14 +207,9 @@ export default function App() {
     if (!btCharRef.current) return showToast('Impressora não conectada', 'erro')
     const lista = Array.isArray(labels) ? labels : [labels]
     try {
-      for (let i = 0; i < lista.length; i++) {
-        if (lista.length > 1) showToast(`Enviando ${i+1}/${lista.length}: ${lista[i].num}`, '', 2000)
-        await printLabelsCpcl(btCharRef.current, lista[i], 1)
-        // Aguarda impressora terminar antes de enviar próxima — evita sobrescrever buffer e gerar cópias com mesmo número
-        if (i < lista.length - 1) {
-          await new Promise(r => setTimeout(r, 3500))
-        }
-      }
+      if (lista.length > 1) showToast(`Imprimindo ${lista.length}: ${lista.map(x => x.num).join(', ')}`, '', 4000)
+      // Envia tudo num único stream com form-feed entre etiquetas
+      await printLabelsCpcl(btCharRef.current, lista, 1)
       showToast(`✓ ${lista.length > 1 ? lista.length + ' etiquetas impressas' : 'Impresso'} via Bluetooth!`, 'ok')
     } catch (e) {
       setBtStatus('error')
@@ -690,7 +685,7 @@ function LoginScreen({ onLogin, syncInfo }) {
         }}>
           Entrar no Sistema
         </button>
-        <p style={{color:'#aaa', fontSize:11, marginTop:16, textAlign:'center'}}>etiqPRO v2.1-btfix</p>
+        <p style={{color:'#aaa', fontSize:11, marginTop:16, textAlign:'center'}}>etiqPRO v2.2-bundle</p>
       </div>
     </div>
   )

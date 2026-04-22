@@ -690,6 +690,7 @@ function LoginScreen({ onLogin, syncInfo }) {
         }}>
           Entrar no Sistema
         </button>
+        <p style={{color:'#aaa', fontSize:11, marginTop:16, textAlign:'center'}}>etiqPRO v2.1-btfix</p>
       </div>
     </div>
   )

@@ -207,8 +207,12 @@ export default function App() {
     if (!btCharRef.current) return showToast('Impressora não conectada', 'erro')
     const lista = Array.isArray(labels) ? labels : [labels]
     try {
-      for (const h of lista) {
-        await printLabelsCpcl(btCharRef.current, h, 1)
+      for (let i = 0; i < lista.length; i++) {
+        await printLabelsCpcl(btCharRef.current, lista[i], 1)
+        // Aguarda impressora terminar antes de enviar próxima — evita sobrescrever buffer e gerar cópias com mesmo número
+        if (i < lista.length - 1) {
+          await new Promise(r => setTimeout(r, 3500))
+        }
       }
       showToast(`✓ ${lista.length > 1 ? lista.length + ' etiquetas impressas' : 'Impresso'} via Bluetooth!`, 'ok')
     } catch (e) {

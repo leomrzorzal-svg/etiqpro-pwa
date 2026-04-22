@@ -173,15 +173,15 @@ function buildPlainText(h) {
 
 export function printViaRawBT(h) {
   const lista = Array.isArray(h) ? h : [h]
-  const content = Array.from({ length: lista.length }, () => buildPlainText(lista[0])).join('\x0C')
+  const content = lista.map(x => buildPlainText(x)).join('\x0C')
   sendRawBT(content)
 }
 
 // ── Impressão BLE direta via CPCL ─────────────────────────────────────────
 // Envia CPCL direto para a impressora via BLE — sem RawBT, sem intermediário.
-// O header "! 0 200 200 400 N" faz a impressora imprimir N cópias automaticamente.
 export async function printLabelsCpcl(char, h, qty = 1) {
   const cpcl = buildCpcl(h, qty)
+  console.log('[CPCL] enviando etiqueta', h.num, '\n', cpcl)
   const bytes = new TextEncoder().encode(cpcl)
   await writeChunked(char, bytes)
 }

@@ -108,8 +108,39 @@ export default function PgConfig() {
 
   const bt = BT_INFO[btStatus] || BT_INFO.disconnected
 
+  async function forcarAtualizacao() {
+    showToast('Atualizando sistema...', '', 3000)
+    try {
+      const regs = await navigator.serviceWorker?.getRegistrations()
+      if (regs) for (const r of regs) await r.unregister()
+      const keys = await caches?.keys()
+      if (keys) for (const k of keys) await caches.delete(k)
+      setTimeout(() => window.location.reload(true), 500)
+    } catch {
+      window.location.reload(true)
+    }
+  }
+
   return (
     <div>
+      {/* Atualizar Sistema */}
+      <div className="panel" style={{marginBottom:20,border:'2px solid #1565c0'}}>
+        <div className="panel-bd" style={{padding:16}}>
+          <div style={{display:'flex',gap:12,alignItems:'center',justifyContent:'space-between',flexWrap:'wrap'}}>
+            <div style={{display:'flex',gap:12,alignItems:'center'}}>
+              <span style={{fontSize:28}}>🔄</span>
+              <div>
+                <div style={{fontWeight:800,fontSize:15,color:'#1565c0'}}>Atualizar Sistema</div>
+                <div style={{fontSize:12,color:'#555'}}>Limpa o cache e baixa a versão mais recente do app</div>
+              </div>
+            </div>
+            <button className="btn" style={{background:'#1565c0',color:'#fff',fontSize:14,padding:'10px 24px'}} onClick={forcarAtualizacao}>
+              🔄 Atualizar Agora
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Modo de Impressora */}
       <div className="panel" style={{marginBottom:20}}>
         <div className="panel-hd"><h3>🖨️ Tipo de Impressora</h3></div>

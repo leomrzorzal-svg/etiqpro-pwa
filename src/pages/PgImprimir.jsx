@@ -68,16 +68,16 @@ export default function PgImprimir() {
       })
     }
 
-    const htmls = novas.map(h => gerarHtmlEtiqueta(h, p, g))
-    imprimirHtmls(htmls)
-
     updateData(d => ({
       ...d,
       counter: (d.counter || 0) + qty,
       hist: [...novas, ...d.hist]
     }))
-    showToast(`✓ ${qty} etiqueta${qty > 1 ? 's' : ''} registrada${qty > 1 ? 's' : ''}!`, 'ok')
     setModal(false)
+    showToast(`✓ ${qty} etiqueta${qty > 1 ? 's' : ''} registrada${qty > 1 ? 's' : ''}! Abrindo impressão...`, 'ok', 4000)
+
+    const htmls = novas.map(h => gerarHtmlEtiqueta(h, p, g))
+    setTimeout(() => imprimirHtmls(htmls), 200)
   }
 
   async function handleImprimirBT() {
@@ -450,13 +450,19 @@ function imprimirHtmls(htmls) {
   if (ifr) ifr.parentNode.removeChild(ifr)
   ifr = document.createElement('iframe')
   ifr.id = ifrId
-  ifr.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:none;visibility:hidden'
+  ifr.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:400px;height:600px;border:none;visibility:hidden'
   document.body.appendChild(ifr)
-  ifr.contentDocument.open()
-  ifr.contentDocument.write(htmls.join(''))
-  ifr.contentDocument.close()
-  ifr.onload = () => {
-    try { ifr.contentWindow.focus(); ifr.contentWindow.print() } catch { window.print() }
-    setTimeout(() => { if (ifr && ifr.parentNode) ifr.parentNode.removeChild(ifr) }, 3000)
-  }
+  const doc = ifr.contentDocument || ifr.contentWindow.document
+  doc.open()
+  doc.write('<!DOCTYPE html><html><head><meta charset="utf-8"><style>@page{margin:0}body{margin:0;padding:0}</style></head><body>' + htmls.join('') + '</body></html>')
+  doc.close()
+  setTimeout(() => {
+    try {
+      ifr.contentWindow.focus()
+      ifr.contentWindow.print()
+    } catch {
+      window.print()
+    }
+    setTimeout(() => { if (ifr && ifr.parentNode) ifr.parentNode.removeChild(ifr) }, 5000)
+  }, 300)
 }

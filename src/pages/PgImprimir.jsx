@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useApp, fd, td, calcVal, nextNum, formatPesoKg } from '../App'
 
 export default function PgImprimir() {
-  const { data, updateData, showToast, btStatus, connectBT, disconnectBT, printBT, doPrintRawBT, btDeviceRef } = useApp()
+  const { data, updateData, showToast, btStatus, connectBT, disconnectBT, printBT, doPrintRawBT, btDeviceRef, printerMode } = useApp()
   const [busca, setBusca] = useState('')
   const [grupoFiltro, setGrupoFiltro] = useState(null)
   const [modal, setModal] = useState(false)
@@ -282,8 +282,30 @@ export default function PgImprimir() {
                 </div>
               </div>
 
-              {/* 3. BOTÃO IMPRIMIR — BLE principal */}
-              {btStatus === 'connected' ? (
+              {/* 3. BOTÃO IMPRIMIR */}
+              {printerMode === 'local' ? (
+                <div style={{marginBottom:8}}>
+                  <button
+                    onClick={handleImprimir}
+                    style={{
+                      display:'block', width:'100%', padding:'18px 0',
+                      background:'linear-gradient(135deg,#2e7d32,#388e3c)',
+                      color:'#fff', border:'none', borderRadius:14,
+                      cursor:'pointer', fontSize:20, fontWeight:900,
+                      fontFamily:'inherit', letterSpacing:.3,
+                      boxShadow:'0 4px 20px rgba(46,125,50,.4)',
+                      marginBottom:6
+                    }}
+                  >
+                    🖨️ IMPRIMIR {qty > 1 ? `· ${qty} cópias` : '· 1 cópia'}
+                  </button>
+                  <div style={{display:'flex', alignItems:'center', justifyContent:'center', background:'#e8f5e9', borderRadius:8, padding:'6px 12px'}}>
+                    <span style={{fontSize:11, color:'#2e7d32', fontWeight:600}}>
+                      🖨️ Impressora Local (USB/Rede) — selecione no diálogo de impressão
+                    </span>
+                  </div>
+                </div>
+              ) : btStatus === 'connected' ? (
                 <div style={{marginBottom:8}}>
                   <button
                     onClick={handleImprimirBT}
@@ -359,9 +381,11 @@ export default function PgImprimir() {
               {/* Rodapé */}
               <div style={{display:'flex', gap:8, marginTop:8, justifyContent:'space-between', alignItems:'center'}}>
                 <button className="btn btn-gy" onClick={() => setModal(false)}>✕ Cancelar</button>
-                <button onClick={handleImprimirRawBT} style={{padding:'8px 14px', background:'#f5f6fa', color:'#6b7280', border:'1px solid #e0e3ea', borderRadius:10, cursor:'pointer', fontSize:11, fontWeight:600, fontFamily:'inherit'}}>
-                  📱 RawBT
-                </button>
+                {printerMode !== 'local' && (
+                  <button onClick={handleImprimirRawBT} style={{padding:'8px 14px', background:'#f5f6fa', color:'#6b7280', border:'1px solid #e0e3ea', borderRadius:10, cursor:'pointer', fontSize:11, fontWeight:600, fontFamily:'inherit'}}>
+                    📱 RawBT
+                  </button>
+                )}
               </div>
             </div>
           </div>

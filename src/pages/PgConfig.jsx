@@ -14,7 +14,7 @@ const ROLE_DESC = {
 }
 
 export default function PgConfig() {
-  const { data, updateData, showToast, user, btStatus, connectBT, disconnectBT, testPrintBT, simpleTestPrintBT, doTestRawBT, doCalibratePrint, btDeviceRef } = useApp()
+  const { data, updateData, showToast, user, btStatus, connectBT, disconnectBT, testPrintBT, simpleTestPrintBT, doTestRawBT, doCalibratePrint, btDeviceRef, printerMode, setPrinterMode } = useApp()
   const [modal, setModal] = useState(false)
   const [form, setForm] = useState({ id: null, nome: '', user: '', senha: '', role: 'operador' })
   const [senhaAtual, setSenhaAtual] = useState('')
@@ -110,50 +110,154 @@ export default function PgConfig() {
 
   return (
     <div>
-      {/* RawBT */}
+      {/* Modo de Impressora */}
       <div className="panel" style={{marginBottom:20}}>
-        <div className="panel-hd"><h3>🖨️ Impressora via RawBT</h3></div>
+        <div className="panel-hd"><h3>🖨️ Tipo de Impressora</h3></div>
         <div className="panel-bd">
-          <div style={{display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
-            <div style={{display:'flex',alignItems:'center',gap:10,padding:'12px 20px',borderRadius:12,background:'#e8f5e9',border:'1px solid #a5d6a733',flex:1,minWidth:220}}>
-              <span style={{fontSize:24}}>📱</span>
-              <div>
-                <div style={{fontWeight:800,fontSize:15,color:'#2e7d32'}}>RawBT configurado</div>
-                <div style={{fontSize:12,color:'#6b7280',marginTop:2}}>Impressão via app RawBT no Android</div>
+          <p style={{fontSize:13,color:'var(--t2)',marginBottom:16}}>
+            Selecione como as etiquetas serão impressas neste dispositivo:
+          </p>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:16}}>
+            {/* Opção Bluetooth */}
+            <div
+              onClick={() => setPrinterMode('ble')}
+              style={{
+                padding:20, borderRadius:14, cursor:'pointer', transition:'all .2s',
+                border: `3px solid ${printerMode === 'ble' ? '#1565c0' : '#e0e3ea'}`,
+                background: printerMode === 'ble' ? '#e3f2fd' : '#fafafa',
+              }}
+            >
+              <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:10}}>
+                <div style={{
+                  width:44,height:44,borderRadius:12,
+                  background: printerMode === 'ble' ? '#1565c0' : '#e0e3ea',
+                  display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,
+                  transition:'background .2s'
+                }}>
+                  {printerMode === 'ble' ? '✅' : '📡'}
+                </div>
+                <div>
+                  <div style={{fontWeight:900,fontSize:16,color: printerMode === 'ble' ? '#1565c0' : '#333'}}>
+                    Bluetooth (BLE)
+                  </div>
+                  <div style={{fontSize:12,color:'var(--t2)'}}>Para tablets e celulares</div>
+                </div>
               </div>
+              <p style={{fontSize:12,color:'#555',lineHeight:1.5,margin:0}}>
+                Conecta diretamente via Bluetooth Low Energy. Ideal para <b>tablets Android</b> com impressoras portáteis. Também suporta impressão via <b>RawBT</b>.
+              </p>
             </div>
-            <button className="btn" style={{background:'#1565c0',color:'#fff'}} onClick={doTestRawBT}>
-              🖨️ Imprimir Teste
-            </button>
-            <button className="btn" style={{background:'#6a1b9a',color:'#fff'}} onClick={doCalibratePrint}>
-              📏 Calibrar Etiqueta
-            </button>
+
+            {/* Opção Local */}
+            <div
+              onClick={() => setPrinterMode('local')}
+              style={{
+                padding:20, borderRadius:14, cursor:'pointer', transition:'all .2s',
+                border: `3px solid ${printerMode === 'local' ? '#2e7d32' : '#e0e3ea'}`,
+                background: printerMode === 'local' ? '#e8f5e9' : '#fafafa',
+              }}
+            >
+              <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:10}}>
+                <div style={{
+                  width:44,height:44,borderRadius:12,
+                  background: printerMode === 'local' ? '#2e7d32' : '#e0e3ea',
+                  display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,
+                  transition:'background .2s'
+                }}>
+                  {printerMode === 'local' ? '✅' : '🖨️'}
+                </div>
+                <div>
+                  <div style={{fontWeight:900,fontSize:16,color: printerMode === 'local' ? '#2e7d32' : '#333'}}>
+                    Impressora Local (USB/Rede)
+                  </div>
+                  <div style={{fontSize:12,color:'var(--t2)'}}>Para computadores</div>
+                </div>
+              </div>
+              <p style={{fontSize:12,color:'#555',lineHeight:1.5,margin:0}}>
+                Usa a impressora instalada no computador (ex: <b>Argox</b>, Zebra, etc). Imprime pelo navegador usando o diálogo de impressão do sistema.
+              </p>
+            </div>
           </div>
-          <p style={{fontSize:12,color:'var(--t2)',marginTop:12}}>
-            ℹ️ O app <b>RawBT</b> deve estar instalado e com a impressora configurada no tablet. Ao imprimir, o Android abrirá o RawBT automaticamente.
-          </p>
-          <p style={{fontSize:12,color:'#6a1b9a',marginTop:6}}>
-            📏 <b>Calibrar Etiqueta:</b> imprime linhas numeradas de 01 a 80. Veja qual número aparece no <b>início da 2ª etiqueta</b> e informe esse número para ajustar as cópias múltiplas.
-          </p>
+          <div style={{
+            marginTop:16, padding:'10px 16px', borderRadius:10, fontSize:13,
+            background: printerMode === 'local' ? '#e8f5e9' : '#e3f2fd',
+            color: printerMode === 'local' ? '#2e7d32' : '#1565c0',
+            border: `1px solid ${printerMode === 'local' ? '#a5d6a7' : '#90caf9'}`,
+            fontWeight:600
+          }}>
+            {printerMode === 'local'
+              ? '✅ Modo ativo: Impressora Local — ao imprimir, o navegador abrirá o diálogo para selecionar a impressora (Argox, Zebra, etc).'
+              : '✅ Modo ativo: Bluetooth — conecte a impressora BLE no botão da barra superior.'}
+          </div>
         </div>
       </div>
 
-      {/* Aviso: NÃO precisa conectar para RawBT */}
-      <div className="panel" style={{marginBottom:20,border:'2px solid #e67e00'}}>
-        <div className="panel-bd" style={{padding:16}}>
-          <div style={{display:'flex',gap:12,alignItems:'flex-start'}}>
-            <span style={{fontSize:28}}>ℹ️</span>
-            <div>
-              <div style={{fontWeight:800,fontSize:15,color:'#e67e00',marginBottom:4}}>Não precisa conectar a impressora!</div>
-              <div style={{fontSize:13,color:'#555',lineHeight:1.5}}>
-                Para imprimir via <b>RawBT</b>, <b>não é necessário conectar nada aqui</b>.<br/>
-                Basta abrir o produto em <b>Imprimir Etiqueta</b> e tocar no botão <b style={{color:'#2e7d32'}}>📱 IMPRIMIR via RawBT</b>.<br/>
-                O Android abre o RawBT automaticamente.
+      {/* RawBT — só aparece no modo Bluetooth */}
+      {printerMode === 'ble' && (
+        <>
+          <div className="panel" style={{marginBottom:20}}>
+            <div className="panel-hd"><h3>🖨️ Impressora via RawBT</h3></div>
+            <div className="panel-bd">
+              <div style={{display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
+                <div style={{display:'flex',alignItems:'center',gap:10,padding:'12px 20px',borderRadius:12,background:'#e8f5e9',border:'1px solid #a5d6a733',flex:1,minWidth:220}}>
+                  <span style={{fontSize:24}}>📱</span>
+                  <div>
+                    <div style={{fontWeight:800,fontSize:15,color:'#2e7d32'}}>RawBT configurado</div>
+                    <div style={{fontSize:12,color:'#6b7280',marginTop:2}}>Impressão via app RawBT no Android</div>
+                  </div>
+                </div>
+                <button className="btn" style={{background:'#1565c0',color:'#fff'}} onClick={doTestRawBT}>
+                  🖨️ Imprimir Teste
+                </button>
+                <button className="btn" style={{background:'#6a1b9a',color:'#fff'}} onClick={doCalibratePrint}>
+                  📏 Calibrar Etiqueta
+                </button>
+              </div>
+              <p style={{fontSize:12,color:'var(--t2)',marginTop:12}}>
+                ℹ️ O app <b>RawBT</b> deve estar instalado e com a impressora configurada no tablet. Ao imprimir, o Android abrirá o RawBT automaticamente.
+              </p>
+              <p style={{fontSize:12,color:'#6a1b9a',marginTop:6}}>
+                📏 <b>Calibrar Etiqueta:</b> imprime linhas numeradas de 01 a 80. Veja qual número aparece no <b>início da 2ª etiqueta</b> e informe esse número para ajustar as cópias múltiplas.
+              </p>
+            </div>
+          </div>
+
+          <div className="panel" style={{marginBottom:20,border:'2px solid #e67e00'}}>
+            <div className="panel-bd" style={{padding:16}}>
+              <div style={{display:'flex',gap:12,alignItems:'flex-start'}}>
+                <span style={{fontSize:28}}>ℹ️</span>
+                <div>
+                  <div style={{fontWeight:800,fontSize:15,color:'#e67e00',marginBottom:4}}>Não precisa conectar a impressora!</div>
+                  <div style={{fontSize:13,color:'#555',lineHeight:1.5}}>
+                    Para imprimir via <b>RawBT</b>, <b>não é necessário conectar nada aqui</b>.<br/>
+                    Basta abrir o produto em <b>Imprimir Etiqueta</b> e tocar no botão <b style={{color:'#2e7d32'}}>📱 IMPRIMIR via RawBT</b>.<br/>
+                    O Android abre o RawBT automaticamente.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Dica para modo local */}
+      {printerMode === 'local' && (
+        <div className="panel" style={{marginBottom:20,border:'2px solid #2e7d32'}}>
+          <div className="panel-bd" style={{padding:16}}>
+            <div style={{display:'flex',gap:12,alignItems:'flex-start'}}>
+              <span style={{fontSize:28}}>🖨️</span>
+              <div>
+                <div style={{fontWeight:800,fontSize:15,color:'#2e7d32',marginBottom:4}}>Impressora Local configurada</div>
+                <div style={{fontSize:13,color:'#555',lineHeight:1.5}}>
+                  Ao clicar em <b>Imprimir</b>, o navegador abrirá o <b>diálogo de impressão do sistema</b>.<br/>
+                  Selecione sua impressora de etiquetas (ex: <b>Argox</b>, Zebra, etc) e confirme.<br/>
+                  Dica: configure o tamanho do papel nas preferências da impressora para o tamanho correto da etiqueta.
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Usuários */}
       <div className="panel" style={{marginBottom:20}}>

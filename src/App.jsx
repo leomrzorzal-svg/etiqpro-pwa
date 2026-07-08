@@ -174,6 +174,14 @@ export default function App() {
   const [btStatus, setBtStatus] = useState('disconnected') // disconnected | connecting | connected | error
   const btDeviceRef = useRef(null)
   const btCharRef = useRef(null)
+  const [printerMode, setPrinterModeState] = useState(() => {
+    try { return localStorage.getItem('etiqpro_printer_mode') || 'ble' } catch { return 'ble' }
+  })
+
+  function setPrinterMode(mode) {
+    setPrinterModeState(mode)
+    try { localStorage.setItem('etiqpro_printer_mode', mode) } catch {}
+  }
 
   async function connectBT() {
     if (!btSupported()) return showToast('Bluetooth não suportado neste navegador. Use Chrome.', 'erro')
@@ -430,7 +438,7 @@ export default function App() {
   const nav = user.role === 'admin' ? NAV_ADMIN : NAV_OP
   const pageInfo = nav.find(n => n.id === page) || nav[0]
 
-  const ctx = { user, data, updateData, showToast, setPage: navigate, btStatus, connectBT, disconnectBT, printBT, testPrintBT, simpleTestPrintBT, doPrintRawBT, doTestRawBT, doCalibratePrint, btDeviceRef }
+  const ctx = { user, data, updateData, showToast, setPage: navigate, btStatus, connectBT, disconnectBT, printBT, testPrintBT, simpleTestPrintBT, doPrintRawBT, doTestRawBT, doCalibratePrint, btDeviceRef, printerMode, setPrinterMode }
 
   const pageMap = {
     imprimir:   <PgImprimir />,
@@ -526,8 +534,19 @@ export default function App() {
               <div style={{fontSize:13, color:'#6b7280', marginTop:2}}>{pageInfo.sub}</div>
             </div>
             <div style={{display:'flex', alignItems:'center', gap:10}}>
-              {/* Impressora BT */}
-              {btStatus === 'connected' ? (
+              {/* Impressora */}
+              {printerMode === 'local' ? (
+                <div
+                  style={{
+                    display:'flex', alignItems:'center', gap:6, padding:'6px 14px',
+                    borderRadius:20, background:'#e8f5e9', border:'1px solid #a5d6a7',
+                    fontSize:12, fontWeight:700, color:'#2e7d32'
+                  }}
+                >
+                  <span>🖨️</span>
+                  <span>Impressora Local</span>
+                </div>
+              ) : btStatus === 'connected' ? (
                 <button
                   onClick={() => { disconnectBT(); setTimeout(() => connectBT(), 300) }}
                   style={{

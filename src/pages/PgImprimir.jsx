@@ -454,7 +454,7 @@ function imprimirHtmls(htmls) {
   document.body.appendChild(ifr)
   const doc = ifr.contentDocument || ifr.contentWindow.document
   doc.open()
-  doc.write('<!DOCTYPE html><html><head><meta charset="utf-8"><style>@page{margin:0}body{margin:0;padding:0}</style></head><body>' + htmls.join('') + '</body></html>')
+  doc.write('<!DOCTYPE html><html><head><meta charset="utf-8"><style>@page{size:landscape;margin:0}body{margin:0;padding:0}</style></head><body>' + htmls.join('') + '</body></html>')
   doc.close()
   setTimeout(() => {
     try {

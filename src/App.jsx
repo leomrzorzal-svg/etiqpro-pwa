@@ -1,6 +1,6 @@
 import React, { useState, createContext, useContext, useEffect, useRef } from 'react'
 import { supabase } from './lib/supabase'
-import { btSupported, connectPrinter, reconnectPrinter, printLabel, printLabelsCpcl, testPrint, simplePrintTest, printViaRawBT, testViaRawBT, calibratePrint } from './lib/bluetooth'
+import { btSupported, connectPrinter, reconnectPrinter, printLabel, printLabelsCpcl, printLabelEscPos, testPrint, simplePrintTest, printViaRawBT, testViaRawBT, calibratePrint } from './lib/bluetooth'
 
 export const AppCtx = createContext({})
 export const useApp = () => useContext(AppCtx)
@@ -215,20 +215,14 @@ export default function App() {
     if (!btDeviceRef.current) return showToast('Impressora não conectada', 'erro')
     const lista = Array.isArray(labels) ? labels : [labels]
     try {
+      if (!btCharRef.current) {
+        btCharRef.current = await reconnectPrinter(btDeviceRef.current)
+      }
       for (let i = 0; i < lista.length; i++) {
-        // Reconecta BLE antes de cada etiqueta (exceto primeira se já conectado) —
-        // força a impressora a tratar cada job como sessão nova, evitando
-        // buffer compartilhado que faz todas saírem com o último número.
-        if (i > 0 || !btCharRef.current) {
-          try { btDeviceRef.current.gatt.disconnect() } catch {}
-          await new Promise(r => setTimeout(r, 600))
-          btCharRef.current = await reconnectPrinter(btDeviceRef.current)
-        }
         showToast(`Imprimindo ${i+1}/${lista.length}: ${lista[i].num}`, '', 3000)
-        await printLabelsCpcl(btCharRef.current, lista[i], 1)
-        // Pequena pausa para impressora físicamente terminar antes da reconexão
+        await printLabelEscPos(btCharRef.current, lista[i])
         if (i < lista.length - 1) {
-          await new Promise(r => setTimeout(r, 1500))
+          await new Promise(r => setTimeout(r, 1000))
         }
       }
       setBtStatus('connected')

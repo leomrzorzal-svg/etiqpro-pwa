@@ -186,6 +186,36 @@ export async function printLabelsCpcl(char, h, qty = 1) {
   await writeChunked(char, bytes)
 }
 
+// ── Texto puro para etiquetas BLE ─────────────────────────────────────────
+// Sem comandos ESC/POS nem CPCL — apenas texto + line-feeds.
+// Compatível com qualquer impressora térmica (Coibeu, etc).
+export function buildPlainLabel(h) {
+  const n = normCpcl
+  const f = fdtCpcl
+  const agora = new Date()
+  const hora  = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+
+  const L = []
+  L.push(n(h.prod || h.produto || '').toUpperCase())
+  if (h.grp) L.push(n(h.grp))
+  L.push('------------------------')
+  L.push('Abertura : ' + f(h.manip || h.fabricacao))
+  L.push('Validade : ' + f(h.val || h.validade))
+  if (h.conserv) L.push(n(h.conserv))
+  if (h.op) L.push('Operador : ' + n(h.op || h.operador || ''))
+  if (h.obs) L.push(n(h.obs))
+  const num = n(h.num || '')
+  L.push(hora + (num ? '   ' + num : ''))
+  L.push('')
+
+  return new TextEncoder().encode(L.join('\r\n') + '\r\n')
+}
+
+export async function printLabelEscPos(char, h) {
+  console.log('[BLE] enviando etiqueta', h.num)
+  await writeChunked(char, buildPlainLabel(h), 20, 150)
+}
+
 export function testViaRawBT() {
   const texto = [
     '================================',

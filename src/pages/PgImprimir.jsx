@@ -83,6 +83,17 @@ export default function PgImprimir() {
   async function handleImprimirBT() {
     if (!opNome.trim()) { setOpErr(true); return }
     setOpErr(false)
+    // Conecta automaticamente se não estiver conectado
+    if (!btDeviceRef.current) {
+      showToast('Conectando impressora...', '', 3000)
+      try {
+        await connectBT()
+      } catch (e) {
+        showToast('Erro ao conectar: ' + e.message, 'erro')
+        return
+      }
+      if (!btDeviceRef.current) return
+    }
     const p = prodSel
     const g = data.grps.find(x => x.id == p.grp) || { nome: 'Sem grupo', cor: '#999' }
     const valDate = p.vDias ? calcVal(p.vDias) : ''
@@ -101,7 +112,6 @@ export default function PgImprimir() {
       })
     }
     updateData(d => ({ ...d, counter: (d.counter || 0) + qty, hist: [...novas, ...d.hist] }))
-    // Envia cada etiqueta separadamente via CPCL — cada uma com seu número
     await printBT(novas)
     setModal(false)
   }
@@ -282,81 +292,48 @@ export default function PgImprimir() {
                 </div>
               </div>
 
-              {/* 3. BOTÃO IMPRIMIR */}
-              {printerMode === 'local' ? (
-                <div style={{marginBottom:8}}>
+              {/* 3. BOTÕES DE IMPRESSÃO */}
+              <div style={{display:'flex', flexDirection:'column', gap:8, marginBottom:8}}>
+                <button
+                  onClick={handleImprimirBT}
+                  style={{
+                    display:'block', width:'100%', padding:'16px 0',
+                    background:'linear-gradient(135deg,#1565c0,#1976d2)',
+                    color:'#fff', border:'none', borderRadius:14,
+                    cursor:'pointer', fontSize:18, fontWeight:900,
+                    fontFamily:'inherit', letterSpacing:.3,
+                    boxShadow:'0 4px 20px rgba(21,101,192,.4)',
+                  }}
+                >
+                  {btStatus === 'connected' ? '🖨️' : '📡'} Bluetooth {qty > 1 ? `· ${qty} cópias` : ''}
+                </button>
+                <div style={{display:'flex', gap:8}}>
+                  <button
+                    onClick={handleImprimirRawBT}
+                    style={{
+                      flex:1, padding:'14px 0',
+                      background:'linear-gradient(135deg,#2e7d32,#388e3c)',
+                      color:'#fff', border:'none', borderRadius:14,
+                      cursor:'pointer', fontSize:16, fontWeight:900,
+                      fontFamily:'inherit',
+                    }}
+                  >
+                    📱 RawBT
+                  </button>
                   <button
                     onClick={handleImprimir}
                     style={{
-                      display:'block', width:'100%', padding:'18px 0',
-                      background:'linear-gradient(135deg,#2e7d32,#388e3c)',
+                      flex:1, padding:'14px 0',
+                      background:'linear-gradient(135deg,#e67e00,#f4a11d)',
                       color:'#fff', border:'none', borderRadius:14,
-                      cursor:'pointer', fontSize:20, fontWeight:900,
-                      fontFamily:'inherit', letterSpacing:.3,
-                      boxShadow:'0 4px 20px rgba(46,125,50,.4)',
-                      marginBottom:6
-                    }}
-                  >
-                    🖨️ IMPRIMIR {qty > 1 ? `· ${qty} cópias` : '· 1 cópia'}
-                  </button>
-                  <div style={{display:'flex', alignItems:'center', justifyContent:'center', background:'#e8f5e9', borderRadius:8, padding:'6px 12px'}}>
-                    <span style={{fontSize:11, color:'#2e7d32', fontWeight:600}}>
-                      🖨️ Impressora Local (USB/Rede) — selecione no diálogo de impressão
-                    </span>
-                  </div>
-                </div>
-              ) : btStatus === 'connected' ? (
-                <div style={{marginBottom:8}}>
-                  <button
-                    onClick={handleImprimirBT}
-                    style={{
-                      display:'block', width:'100%', padding:'18px 0',
-                      background:'linear-gradient(135deg,#1565c0,#1976d2)',
-                      color:'#fff', border:'none', borderRadius:14,
-                      cursor:'pointer', fontSize:20, fontWeight:900,
-                      fontFamily:'inherit', letterSpacing:.3,
-                      boxShadow:'0 4px 20px rgba(21,101,192,.4)',
-                      marginBottom:6
-                    }}
-                  >
-                    🖨️ IMPRIMIR {qty > 1 ? `· ${qty} cópias` : '· 1 cópia'}
-                  </button>
-                  <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', background:'#e8f5e9', borderRadius:8, padding:'6px 12px'}}>
-                    <span style={{fontSize:11, color:'#2e7d32', fontWeight:600}}>
-                      🟢 {btDeviceRef.current?.name || 'Impressora'}
-                    </span>
-                    <button
-                      onClick={async () => { disconnectBT(); setTimeout(() => connectBT(), 300) }}
-                      style={{
-                        padding:'4px 12px', background:'#fff', color:'#1565c0', border:'1px solid #1565c0',
-                        borderRadius:6, cursor:'pointer', fontSize:11, fontWeight:700, fontFamily:'inherit'
-                      }}
-                    >
-                      🔄 Trocar Impressora
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div style={{marginBottom:8}}>
-                  <button
-                    onClick={connectBT}
-                    style={{
-                      display:'block', width:'100%', padding:'18px 0',
-                      background:'linear-gradient(135deg,#1565c0,#1976d2)',
-                      color:'#fff', border:'none', borderRadius:14,
-                      cursor:'pointer', fontSize:18, fontWeight:900,
+                      cursor:'pointer', fontSize:16, fontWeight:900,
                       fontFamily:'inherit',
-                      boxShadow:'0 4px 20px rgba(21,101,192,.4)',
-                      marginBottom:6
                     }}
                   >
-                    📡 Conectar Impressora Bluetooth
+                    🖨️ Imprimir Agora
                   </button>
-                  <div style={{fontSize:12, color:'#6b7280', textAlign:'center'}}>
-                    Conecte a impressora uma vez por sessão
-                  </div>
                 </div>
-              )}
+              </div>
 
               {/* 4. Preview compacto (abaixo do botão, scroll se necessário) */}
               <div style={{border:'2px solid #e0e3ea', borderRadius:10, padding:12, background:'#fafafa', fontFamily:'Arial,sans-serif', fontSize:11}}>
@@ -379,13 +356,8 @@ export default function PgImprimir() {
               </div>
 
               {/* Rodapé */}
-              <div style={{display:'flex', gap:8, marginTop:8, justifyContent:'space-between', alignItems:'center'}}>
+              <div style={{display:'flex', gap:8, marginTop:8, justifyContent:'center'}}>
                 <button className="btn btn-gy" onClick={() => setModal(false)}>✕ Cancelar</button>
-                {printerMode !== 'local' && (
-                  <button onClick={handleImprimirRawBT} style={{padding:'8px 14px', background:'#f5f6fa', color:'#6b7280', border:'1px solid #e0e3ea', borderRadius:10, cursor:'pointer', fontSize:11, fontWeight:600, fontFamily:'inherit'}}>
-                    📱 RawBT
-                  </button>
-                )}
               </div>
             </div>
           </div>

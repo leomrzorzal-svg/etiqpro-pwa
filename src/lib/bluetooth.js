@@ -186,29 +186,32 @@ export async function printLabelsCpcl(char, h, qty = 1) {
   await writeChunked(char, bytes)
 }
 
-// ── Texto puro para etiquetas BLE ─────────────────────────────────────────
-// Sem comandos ESC/POS nem CPCL — apenas texto + line-feeds.
-// Compatível com qualquer impressora térmica (Coibeu, etc).
+// ── Etiqueta compacta BLE (ESC/POS com line-spacing mínimo) ───────────────
+// Line-spacing reduzido para caber numa etiqueta adesiva sem avançar demais.
 export function buildPlainLabel(h) {
   const n = normCpcl
   const f = fdtCpcl
   const agora = new Date()
   const hora  = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-
-  const L = []
-  L.push(n(h.prod || h.produto || '').toUpperCase())
-  if (h.grp) L.push(n(h.grp))
-  L.push('------------------------')
-  L.push('Abertura : ' + f(h.manip || h.fabricacao))
-  L.push('Validade : ' + f(h.val || h.validade))
-  if (h.conserv) L.push(n(h.conserv))
-  if (h.op) L.push('Operador : ' + n(h.op || h.operador || ''))
-  if (h.obs) L.push(n(h.obs))
   const num = n(h.num || '')
-  L.push(hora + (num ? '   ' + num : ''))
-  L.push('')
 
-  return new TextEncoder().encode(L.join('\r\n') + '\r\n')
+  const bytes = []
+  const push = (...b) => bytes.push(...b)
+  const txt = (s) => push(...ENC.encode(s), 0x0A)
+
+  // Line spacing = 16 dots (~2mm por linha) — bem compacto
+  push(0x1B, 0x33, 0x10)
+
+  txt(n(h.prod || h.produto || '').toUpperCase())
+  if (h.grp) txt(n(h.grp))
+  txt('------------------------')
+  txt('Abertura : ' + f(h.manip || h.fabricacao))
+  txt('Validade : ' + f(h.val || h.validade))
+  if (h.conserv) txt(n(h.conserv))
+  if (h.op) txt('Operador : ' + n(h.op || h.operador || ''))
+  txt(hora + (num ? '   ' + num : ''))
+
+  return new Uint8Array(bytes)
 }
 
 export async function printLabelEscPos(char, h) {

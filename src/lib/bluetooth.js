@@ -199,8 +199,9 @@ export function buildPlainLabel(h) {
   const push = (...b) => bytes.push(...b)
   const txt = (s) => push(...ENC.encode(s), 0x0A)
 
-  // Line spacing = 16 dots (~2mm por linha) — bem compacto
-  push(0x1B, 0x33, 0x10)
+  // Init impressora + line spacing compacto
+  push(0x1B, 0x40)
+  push(0x1B, 0x33, 0x16)
 
   txt(n(h.prod || h.produto || '').toUpperCase())
   if (h.grp) txt(n(h.grp))
@@ -210,6 +211,9 @@ export function buildPlainLabel(h) {
   if (h.conserv) txt(n(h.conserv))
   if (h.op) txt('Operador : ' + n(h.op || h.operador || ''))
   txt(hora + (num ? '   ' + num : ''))
+
+  // Flush: avança pra impressora liberar o conteúdo
+  push(0x0A, 0x0A, 0x0A)
 
   return new Uint8Array(bytes)
 }

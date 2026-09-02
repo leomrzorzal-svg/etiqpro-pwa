@@ -13,6 +13,10 @@ const BT_CHARS = [
   '6e400002-b5a3-f393-e0a9-e50e24dcca9e',
 ]
 
+// Margem esquerda da etiqueta, em caracteres. Sem ela a impressora corta o
+// início das palavras. Aumente se ainda cortar, diminua se sobrar espaço.
+const MARGEM_ESQ = 3
+
 export function btSupported() {
   return !!(navigator.bluetooth)
 }
@@ -127,9 +131,11 @@ function center(str, w) {
 function buildPlainText(h) {
   const n = normCpcl
   const f = fdtCpcl
-  const W = 32
-  const SEP = '================================'
-  const DIV = '--------------------------------'
+  // Largura útil descontando a margem esquerda (total continua 32 colunas)
+  const margem = ' '.repeat(MARGEM_ESQ)
+  const W = 32 - MARGEM_ESQ
+  const SEP = '='.repeat(W)
+  const DIV = '-'.repeat(W)
   const prod   = n(h.prod || h.produto || '').toUpperCase()
   const grp    = n(h.grp || '')
   const ab     = f(h.manip || h.fabricacao)
@@ -168,7 +174,7 @@ function buildPlainText(h) {
   L.push(center(`${hoje} ${hora}`, W))
   L.push(SEP)
 
-  return L.join('\r\n') + '\r\n'
+  return L.map(l => margem + l).join('\r\n') + '\r\n'
 }
 
 export function printViaRawBT(h) {
@@ -197,7 +203,8 @@ export function buildPlainLabel(h) {
 
   const bytes = []
   const push = (...b) => bytes.push(...b)
-  const txt = (s) => push(...ENC.encode(s), 0x0A)
+  const margem = ' '.repeat(MARGEM_ESQ)
+  const txt = (s) => push(...ENC.encode(margem + s), 0x0A)
 
   // Init impressora + line spacing compacto
   push(0x1B, 0x40)
@@ -205,7 +212,7 @@ export function buildPlainLabel(h) {
 
   txt(n(h.prod || h.produto || '').toUpperCase())
   if (h.grp) txt(n(h.grp))
-  txt('------------------------')
+  txt('-'.repeat(Math.max(8, 24 - MARGEM_ESQ)))
   txt('Abertura : ' + f(h.manip || h.fabricacao))
   txt('Validade : ' + f(h.val || h.validade))
   if (h.conserv) txt(n(h.conserv))

@@ -393,7 +393,7 @@ function ProdCard({ p, g, onClick }) {
   )
 }
 
-// Etiqueta pequena: 102,5×50mm (376×186px). Grande: 102,5×100mm (376×372px),
+// Etiqueta pequena: 100×50mm (376×186px). Grande: 100×100mm (376×372px),
 // mesma largura e o dobro da altura — fontes e espaçamentos escalam por `k`.
 function gerarHtmlEtiqueta(h, p, g, grande = false) {
   const hora = new Date(h.at).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'})
@@ -434,10 +434,10 @@ function imprimirHtmls(htmls, grande = false) {
   const doc = ifr.contentDocument || ifr.contentWindow.document
   doc.open()
   // Página = tamanho exato do estoque da Argox (pequena "impressora 5x10" =
-  // 102,5×50mm; grande "etiq_Grade" = 102,5×100mm) e uma etiqueta por página.
+  // 100×50mm; grande "etiq_Grade" = 100×100mm) e uma etiqueta por página.
   // Se a página não bate com a etiqueta física, a impressora avança etiquetas
   // em branco após cada impressão.
-  const pagina = grande ? '102.5mm 100mm' : '102.5mm 50mm'
+  const pagina = grande ? '100mm 100mm' : '100mm 50mm'
   doc.write('<!DOCTYPE html><html><head><meta charset="utf-8"><style>'
     + `@page{size:${pagina};margin:0}`
     + 'html,body{margin:0;padding:0}'

@@ -233,8 +233,8 @@ export default function PgConfig() {
             </p>
             <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:16}}>
               {[
-                { id:'pequena', titulo:'Pequena', medida:'102,5 × 50 mm', desc:'Uma etiqueta baixa por linha. No driver da Argox costuma aparecer como "impressora 5x10".' },
-                { id:'grande',  titulo:'Grande',  medida:'102,5 × 100 mm', desc:'Etiqueta com o dobro da altura. No driver da Argox costuma aparecer como "etiq_Grade". O texto sai maior.' },
+                { id:'pequena', titulo:'Pequena', medida:'100 × 50 mm', desc:'Uma etiqueta baixa por linha. No driver da Argox costuma aparecer como "impressora 5x10".' },
+                { id:'grande',  titulo:'Grande',  medida:'100 × 100 mm', desc:'Etiqueta com o dobro da altura. No driver da Argox costuma aparecer como "etiq_Grade". O texto sai maior.' },
               ].map(o => {
                 const ativo = labelSize === o.id
                 return (

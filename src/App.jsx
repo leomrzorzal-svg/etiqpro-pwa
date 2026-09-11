@@ -184,7 +184,7 @@ export default function App() {
   }
 
   // Tamanho da etiqueta na impressora local — por dispositivo, pois cada
-  // computador pode ter um rolo diferente: 'pequena' (102,5×50) ou 'grande' (102,5×100)
+  // computador pode ter um rolo diferente: 'pequena' (100×50) ou 'grande' (100×100)
   const [labelSize, setLabelSizeState] = useState(() => {
     try { return localStorage.getItem('etiqpro_label_size') || 'pequena' } catch { return 'pequena' }
   })

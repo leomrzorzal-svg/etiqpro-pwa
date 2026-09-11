@@ -78,7 +78,7 @@ export default function PgImprimir() {
 
     const grande = labelSize === 'grande'
     const htmls = novas.map(h => gerarHtmlEtiqueta(h, p, g, grande))
-    setTimeout(() => imprimirHtmls(htmls, grande), 200)
+    setTimeout(() => imprimirHtmls(htmls), 200)
   }
 
   async function handleImprimirBT() {
@@ -422,7 +422,7 @@ ${p.obs ? `<div style="font-size:${s(8)};color:#888;font-style:italic;white-spac
 </div></body></html>`
 }
 
-function imprimirHtmls(htmls, grande = false) {
+function imprimirHtmls(htmls) {
   const ifrId = 'printFrame'
   let ifr = document.getElementById(ifrId)
   if (ifr) ifr.parentNode.removeChild(ifr)
@@ -433,13 +433,13 @@ function imprimirHtmls(htmls, grande = false) {
   document.body.appendChild(ifr)
   const doc = ifr.contentDocument || ifr.contentWindow.document
   doc.open()
-  // Página = tamanho exato do estoque da Argox (pequena "impressora 5x10" =
-  // 100×50mm; grande "etiq_Grade" = 100×100mm) e uma etiqueta por página.
-  // Se a página não bate com a etiqueta física, a impressora avança etiquetas
-  // em branco após cada impressão.
-  const pagina = grande ? '100mm 100mm' : '100mm 50mm'
+  // NÃO declarar `size` no @page: uma página mais larga que alta faz o Chrome
+  // marcar o job como Paisagem, e o driver da Argox (Seagull) responde girando
+  // a etiqueta — passa a alimentar 100mm de comprimento numa etiqueta de 50mm
+  // e "pula uma". Sem size, o Chrome usa o papel configurado no driver em
+  // Retrato, sem rotação. Só margem zero e uma etiqueta por página.
   doc.write('<!DOCTYPE html><html><head><meta charset="utf-8"><style>'
-    + `@page{size:${pagina};margin:0}`
+    + '@page{margin:0}'
     + 'html,body{margin:0;padding:0}'
     + 'body>div{page-break-after:always;break-after:page;page-break-inside:avoid;break-inside:avoid}'
     + 'body>div:last-child{page-break-after:auto;break-after:auto}'

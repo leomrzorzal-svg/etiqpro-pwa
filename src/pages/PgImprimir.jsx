@@ -397,7 +397,7 @@ function gerarHtmlEtiqueta(h, p, g) {
   const dataFmt = new Date(h.at).toLocaleDateString('pt-BR')
   const fdt = s => { if (!s) return '--/--/----'; const pt = s.split('-'); return `${pt[2]}/${pt[1]}/${pt[0]}` }
   return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;background:#fff;font-family:Arial,sans-serif">
-<div style="width:378px;height:189px;border:2px solid #e67e00;border-radius:4px;box-sizing:border-box;padding:6px 10px;overflow:hidden;display:flex;flex-direction:column;gap:3px">
+<div style="width:376px;height:186px;border:2px solid #e67e00;border-radius:4px;box-sizing:border-box;padding:6px 10px;overflow:hidden;display:flex;flex-direction:column;gap:3px">
 <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:900;font-size:8px;color:#e67e00">etiqPRO</span><span style="font-size:8px;color:#aaa">${h.num}</span></div>
 <div style="font-size:17px;font-weight:900;color:#111;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.nome}</div>
 <div style="font-size:9px;font-weight:700;color:${g.cor}">${g.nome}</div>
@@ -427,7 +427,15 @@ function imprimirHtmls(htmls) {
   document.body.appendChild(ifr)
   const doc = ifr.contentDocument || ifr.contentWindow.document
   doc.open()
-  doc.write('<!DOCTYPE html><html><head><meta charset="utf-8"><style>@page{size:landscape;margin:0}body{margin:0;padding:0}</style></head><body>' + htmls.join('') + '</body></html>')
+  // Página = tamanho exato da etiqueta (100×50mm) e uma etiqueta por página.
+  // Sem isso o driver usa a página padrão dele (maior) e a impressora avança
+  // etiquetas em branco após cada impressão.
+  doc.write('<!DOCTYPE html><html><head><meta charset="utf-8"><style>'
+    + '@page{size:100mm 50mm;margin:0}'
+    + 'html,body{margin:0;padding:0}'
+    + 'body>div{page-break-after:always;break-after:page;page-break-inside:avoid;break-inside:avoid}'
+    + 'body>div:last-child{page-break-after:auto;break-after:auto}'
+    + '</style></head><body>' + htmls.join('') + '</body></html>')
   doc.close()
 
   // O iframe só pode sair do DOM depois que o job foi enviado ao spooler.

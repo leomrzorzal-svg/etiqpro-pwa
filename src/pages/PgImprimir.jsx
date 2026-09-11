@@ -422,12 +422,21 @@ function imprimirHtmls(htmls) {
   if (ifr) ifr.parentNode.removeChild(ifr)
   ifr = document.createElement('iframe')
   ifr.id = ifrId
-  ifr.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:400px;height:600px;border:none;visibility:hidden'
+  // Sem visibility:hidden — alguns Chromium imprimem página em branco. Só tira da tela.
+  ifr.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:400px;height:600px;border:none;opacity:0;pointer-events:none'
   document.body.appendChild(ifr)
   const doc = ifr.contentDocument || ifr.contentWindow.document
   doc.open()
   doc.write('<!DOCTYPE html><html><head><meta charset="utf-8"><style>@page{size:landscape;margin:0}body{margin:0;padding:0}</style></head><body>' + htmls.join('') + '</body></html>')
   doc.close()
+
+  // O iframe só pode sair do DOM depois que o job foi enviado ao spooler.
+  // Removê-lo em timer fixo cancelava a impressão silenciosamente quando o
+  // usuário demorava no diálogo (escolher impressora, "diálogo do sistema").
+  const remover = () => { if (ifr && ifr.parentNode) ifr.parentNode.removeChild(ifr) }
+  ifr.contentWindow.addEventListener('afterprint', () => setTimeout(remover, 2000))
+  setTimeout(remover, 5 * 60 * 1000)
+
   setTimeout(() => {
     try {
       ifr.contentWindow.focus()
@@ -435,6 +444,5 @@ function imprimirHtmls(htmls) {
     } catch {
       window.print()
     }
-    setTimeout(() => { if (ifr && ifr.parentNode) ifr.parentNode.removeChild(ifr) }, 5000)
   }, 300)
 }

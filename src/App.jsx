@@ -183,6 +183,17 @@ export default function App() {
     try { localStorage.setItem('etiqpro_printer_mode', mode) } catch {}
   }
 
+  // Tamanho da etiqueta na impressora local — por dispositivo, pois cada
+  // computador pode ter um rolo diferente: 'pequena' (102,5×50) ou 'grande' (102,5×100)
+  const [labelSize, setLabelSizeState] = useState(() => {
+    try { return localStorage.getItem('etiqpro_label_size') || 'pequena' } catch { return 'pequena' }
+  })
+
+  function setLabelSize(size) {
+    setLabelSizeState(size)
+    try { localStorage.setItem('etiqpro_label_size', size) } catch {}
+  }
+
   async function connectBT() {
     if (!btSupported()) return showToast('Bluetooth não suportado neste navegador. Use Chrome.', 'erro')
     setBtStatus('connecting')
@@ -432,7 +443,7 @@ export default function App() {
   const nav = user.role === 'admin' ? NAV_ADMIN : NAV_OP
   const pageInfo = nav.find(n => n.id === page) || nav[0]
 
-  const ctx = { user, data, updateData, showToast, setPage: navigate, btStatus, connectBT, disconnectBT, printBT, testPrintBT, simpleTestPrintBT, doPrintRawBT, doTestRawBT, doCalibratePrint, btDeviceRef, printerMode, setPrinterMode }
+  const ctx = { user, data, updateData, showToast, setPage: navigate, btStatus, connectBT, disconnectBT, printBT, testPrintBT, simpleTestPrintBT, doPrintRawBT, doTestRawBT, doCalibratePrint, btDeviceRef, printerMode, setPrinterMode, labelSize, setLabelSize }
 
   const pageMap = {
     imprimir:   <PgImprimir />,

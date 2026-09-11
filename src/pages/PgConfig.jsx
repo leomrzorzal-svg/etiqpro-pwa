@@ -14,7 +14,7 @@ const ROLE_DESC = {
 }
 
 export default function PgConfig() {
-  const { data, updateData, showToast, user, btStatus, connectBT, disconnectBT, testPrintBT, simpleTestPrintBT, doTestRawBT, doCalibratePrint, btDeviceRef, printerMode, setPrinterMode } = useApp()
+  const { data, updateData, showToast, user, btStatus, connectBT, disconnectBT, testPrintBT, simpleTestPrintBT, doTestRawBT, doCalibratePrint, btDeviceRef, printerMode, setPrinterMode, labelSize, setLabelSize } = useApp()
   const [modal, setModal] = useState(false)
   const [form, setForm] = useState({ id: null, nome: '', user: '', senha: '', role: 'operador' })
   const [senhaAtual, setSenhaAtual] = useState('')
@@ -222,6 +222,53 @@ export default function PgConfig() {
           </div>
         </div>
       </div>
+
+      {/* Tamanho da etiqueta — só no modo Local; cada computador tem seu rolo */}
+      {printerMode === 'local' && (
+        <div className="panel" style={{marginBottom:20}}>
+          <div className="panel-hd"><h3>🏷️ Tamanho da Etiqueta</h3></div>
+          <div className="panel-bd">
+            <p style={{fontSize:13,color:'var(--t2)',marginBottom:16}}>
+              Escolha o rolo que está na impressora <b>deste computador</b>. A impressão usa a página com o tamanho exato, sem pular etiquetas.
+            </p>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:16}}>
+              {[
+                { id:'pequena', titulo:'Pequena', medida:'102,5 × 50 mm', desc:'Uma etiqueta baixa por linha. No driver da Argox costuma aparecer como "impressora 5x10".' },
+                { id:'grande',  titulo:'Grande',  medida:'102,5 × 100 mm', desc:'Etiqueta com o dobro da altura. No driver da Argox costuma aparecer como "etiq_Grade". O texto sai maior.' },
+              ].map(o => {
+                const ativo = labelSize === o.id
+                return (
+                  <div
+                    key={o.id}
+                    onClick={() => setLabelSize(o.id)}
+                    style={{
+                      padding:20, borderRadius:14, cursor:'pointer', transition:'all .2s',
+                      border: `3px solid ${ativo ? '#e67e00' : '#e0e3ea'}`,
+                      background: ativo ? '#fff8f0' : '#fafafa',
+                    }}
+                  >
+                    <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:10}}>
+                      <div style={{
+                        width:44,height:44,borderRadius:12,
+                        background: ativo ? '#e67e00' : '#e0e3ea',
+                        display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,
+                        transition:'background .2s'
+                      }}>
+                        {ativo ? '✅' : '🏷️'}
+                      </div>
+                      <div>
+                        <div style={{fontWeight:900,fontSize:16,color: ativo ? '#e67e00' : '#333'}}>{o.titulo}</div>
+                        <div style={{fontSize:12,color:'var(--t2)'}}>{o.medida}</div>
+                      </div>
+                    </div>
+                    <p style={{fontSize:12,color:'#555',lineHeight:1.5,margin:0}}>{o.desc}</p>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* RawBT — só aparece no modo Bluetooth */}
       {printerMode === 'ble' && (

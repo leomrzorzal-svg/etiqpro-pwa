@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useApp, fd, td, calcVal, nextNum, formatPesoKg } from '../App'
 
 export default function PgImprimir() {
-  const { data, updateData, showToast, btStatus, connectBT, disconnectBT, printBT, doPrintRawBT, btDeviceRef, printerMode } = useApp()
+  const { data, updateData, showToast, btStatus, connectBT, disconnectBT, printBT, doPrintRawBT, btDeviceRef, printerMode, labelSize } = useApp()
   const [busca, setBusca] = useState('')
   const [grupoFiltro, setGrupoFiltro] = useState(null)
   const [modal, setModal] = useState(false)
@@ -76,8 +76,9 @@ export default function PgImprimir() {
     setModal(false)
     showToast(`✓ ${qty} etiqueta${qty > 1 ? 's' : ''} registrada${qty > 1 ? 's' : ''}! Abrindo impressão...`, 'ok', 4000)
 
-    const htmls = novas.map(h => gerarHtmlEtiqueta(h, p, g))
-    setTimeout(() => imprimirHtmls(htmls), 200)
+    const grande = labelSize === 'grande'
+    const htmls = novas.map(h => gerarHtmlEtiqueta(h, p, g, grande))
+    setTimeout(() => imprimirHtmls(htmls, grande), 200)
   }
 
   async function handleImprimirBT() {
@@ -392,31 +393,36 @@ function ProdCard({ p, g, onClick }) {
   )
 }
 
-function gerarHtmlEtiqueta(h, p, g) {
+// Etiqueta pequena: 102,5×50mm (376×186px). Grande: 102,5×100mm (376×372px),
+// mesma largura e o dobro da altura — fontes e espaçamentos escalam por `k`.
+function gerarHtmlEtiqueta(h, p, g, grande = false) {
   const hora = new Date(h.at).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'})
   const dataFmt = new Date(h.at).toLocaleDateString('pt-BR')
   const fdt = s => { if (!s) return '--/--/----'; const pt = s.split('-'); return `${pt[2]}/${pt[1]}/${pt[0]}` }
+  const k = grande ? 1.5 : 1
+  const s = v => Math.round(v * k) + 'px'
+  const alt = grande ? 372 : 186
   return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;background:#fff;font-family:Arial,sans-serif">
-<div style="width:376px;height:186px;border:2px solid #e67e00;border-radius:4px;box-sizing:border-box;padding:6px 10px;overflow:hidden;display:flex;flex-direction:column;gap:3px">
-<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:900;font-size:8px;color:#e67e00">etiqPRO</span><span style="font-size:8px;color:#aaa">${h.num}</span></div>
-<div style="font-size:17px;font-weight:900;color:#111;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.nome}</div>
-<div style="font-size:9px;font-weight:700;color:${g.cor}">${g.nome}</div>
-<div style="display:flex;gap:16px;background:#f5f6fa;border-radius:3px;padding:3px 6px">
-<div><div style="font-size:8px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.5px">Abertura</div><div style="font-size:15px;font-weight:900;color:#111;line-height:1.1">${fdt(h.manip)}</div></div>
-<div><div style="font-size:8px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.5px">Validade</div><div style="font-size:15px;font-weight:900;color:#e53935;line-height:1.1">${h.val ? fdt(h.val) : '--'}</div></div>
-${h.peso ? `<div><div style="font-size:8px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.5px">Peso</div><div style="font-size:13px;font-weight:900;color:#111;line-height:1.1">${h.peso}</div></div>` : ''}
+<div style="width:376px;height:${alt}px;border:2px solid #e67e00;border-radius:4px;box-sizing:border-box;padding:${s(6)} ${s(10)};overflow:hidden;display:flex;flex-direction:column;gap:${s(3)}">
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:900;font-size:${s(8)};color:#e67e00">etiqPRO</span><span style="font-size:${s(8)};color:#aaa">${h.num}</span></div>
+<div style="font-size:${s(17)};font-weight:900;color:#111;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.nome}</div>
+<div style="font-size:${s(9)};font-weight:700;color:${g.cor}">${g.nome}</div>
+<div style="display:flex;gap:${s(16)};background:#f5f6fa;border-radius:3px;padding:${s(3)} ${s(6)}">
+<div><div style="font-size:${s(8)};font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.5px">Abertura</div><div style="font-size:${s(15)};font-weight:900;color:#111;line-height:1.1">${fdt(h.manip)}</div></div>
+<div><div style="font-size:${s(8)};font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.5px">Validade</div><div style="font-size:${s(15)};font-weight:900;color:#e53935;line-height:1.1">${h.val ? fdt(h.val) : '--'}</div></div>
+${h.peso ? `<div><div style="font-size:${s(8)};font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.5px">Peso</div><div style="font-size:${s(13)};font-weight:900;color:#111;line-height:1.1">${h.peso}</div></div>` : ''}
 </div>
-${p.ingr ? `<div style="background:#fff8f0;border-left:3px solid #e67e00;padding:2px 5px;border-radius:2px"><span style="font-size:8px;font-weight:700;color:#e67e00;text-transform:uppercase">Ingredientes: </span><span style="font-size:8px;color:#333">${p.ingr}</span></div>` : ''}
-${p.conserv ? `<div style="font-size:8px;font-weight:700;color:#1565c0;background:#e3f2fd;padding:1px 5px;border-radius:2px;display:inline-block">${p.conserv}</div>` : ''}
-${p.obs ? `<div style="font-size:8px;color:#888;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.obs}</div>` : ''}
-<div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid #ddd;padding-top:2px;margin-top:auto">
-<span style="font-size:8px;font-weight:700;color:#333">Operador: ${h.op}</span>
-<span style="font-size:8px;color:#666">${hora} &nbsp; ${dataFmt}</span>
+${p.ingr ? `<div style="background:#fff8f0;border-left:3px solid #e67e00;padding:${s(2)} ${s(5)};border-radius:2px"><span style="font-size:${s(8)};font-weight:700;color:#e67e00;text-transform:uppercase">Ingredientes: </span><span style="font-size:${s(8)};color:#333">${p.ingr}</span></div>` : ''}
+${p.conserv ? `<div style="font-size:${s(8)};font-weight:700;color:#1565c0;background:#e3f2fd;padding:${s(1)} ${s(5)};border-radius:2px;display:inline-block">${p.conserv}</div>` : ''}
+${p.obs ? `<div style="font-size:${s(8)};color:#888;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.obs}</div>` : ''}
+<div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid #ddd;padding-top:${s(2)};margin-top:auto">
+<span style="font-size:${s(8)};font-weight:700;color:#333">Operador: ${h.op}</span>
+<span style="font-size:${s(8)};color:#666">${hora} &nbsp; ${dataFmt}</span>
 </div>
 </div></body></html>`
 }
 
-function imprimirHtmls(htmls) {
+function imprimirHtmls(htmls, grande = false) {
   const ifrId = 'printFrame'
   let ifr = document.getElementById(ifrId)
   if (ifr) ifr.parentNode.removeChild(ifr)
@@ -427,11 +433,13 @@ function imprimirHtmls(htmls) {
   document.body.appendChild(ifr)
   const doc = ifr.contentDocument || ifr.contentWindow.document
   doc.open()
-  // Página = tamanho exato do estoque da Argox ("impressora 5x10" = 102,5×50mm)
-  // e uma etiqueta por página. Sem isso o driver usa a página padrão dele
-  // (maior) e a impressora avança etiquetas em branco após cada impressão.
+  // Página = tamanho exato do estoque da Argox (pequena "impressora 5x10" =
+  // 102,5×50mm; grande "etiq_Grade" = 102,5×100mm) e uma etiqueta por página.
+  // Se a página não bate com a etiqueta física, a impressora avança etiquetas
+  // em branco após cada impressão.
+  const pagina = grande ? '102.5mm 100mm' : '102.5mm 50mm'
   doc.write('<!DOCTYPE html><html><head><meta charset="utf-8"><style>'
-    + '@page{size:102.5mm 50mm;margin:0}'
+    + `@page{size:${pagina};margin:0}`
     + 'html,body{margin:0;padding:0}'
     + 'body>div{page-break-after:always;break-after:page;page-break-inside:avoid;break-inside:avoid}'
     + 'body>div:last-child{page-break-after:auto;break-after:auto}'

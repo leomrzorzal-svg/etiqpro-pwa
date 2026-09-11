@@ -427,11 +427,11 @@ function imprimirHtmls(htmls) {
   document.body.appendChild(ifr)
   const doc = ifr.contentDocument || ifr.contentWindow.document
   doc.open()
-  // Página = tamanho exato da etiqueta (100×50mm) e uma etiqueta por página.
-  // Sem isso o driver usa a página padrão dele (maior) e a impressora avança
-  // etiquetas em branco após cada impressão.
+  // Página = tamanho exato do estoque da Argox ("impressora 5x10" = 102,5×50mm)
+  // e uma etiqueta por página. Sem isso o driver usa a página padrão dele
+  // (maior) e a impressora avança etiquetas em branco após cada impressão.
   doc.write('<!DOCTYPE html><html><head><meta charset="utf-8"><style>'
-    + '@page{size:100mm 50mm;margin:0}'
+    + '@page{size:102.5mm 50mm;margin:0}'
     + 'html,body{margin:0;padding:0}'
     + 'body>div{page-break-after:always;break-after:page;page-break-inside:avoid;break-inside:avoid}'
     + 'body>div:last-child{page-break-after:auto;break-after:auto}'
